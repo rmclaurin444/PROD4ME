@@ -3,7 +3,7 @@
 import { Plus, Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/app/ui'
-import { beats } from '@/components/app/data'
+import type { ShapedBeat } from '@/lib/beats'
 
 export function ProducerProfile({
   onEdit,
@@ -46,6 +46,7 @@ export function ProducerProfile({
 export function ArtistProfile({
   tracks,
   saved,
+  beats,
   onPost,
   onEdit,
   banner,
@@ -54,8 +55,9 @@ export function ArtistProfile({
   userName,
   avatarText,
 }: {
-  tracks: { title: string; url: string; beat: string; art: string }[]
-  saved: number[]
+  tracks: { title: string; url: string; beat: string; art: string | null }[]
+  saved: string[]
+  beats: ShapedBeat[]
   onPost: () => void
   onEdit: () => void
   banner: string
@@ -109,18 +111,22 @@ export function ArtistProfile({
 
       <h2 className="mt-10 text-xl font-black">Saved Beats · {saved.length}</h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {saved.map((i: number) => (
-          <div
-            key={beats[i].title}
-            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-3"
-          >
-            <img src={beats[i].art} alt="" className="size-14 rounded-xl object-cover" />
-            <div>
-              <p className="font-black">{beats[i].title}</p>
-              <p className="text-xs text-muted-foreground">{beats[i].producer}</p>
+        {saved.map((id: string) => {
+          const b = beats.find(x => x.id === id)
+          if (!b) return null
+          return (
+            <div
+              key={id}
+              className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-3"
+            >
+              {b.artUrl && <img src={b.artUrl} alt="" className="size-14 rounded-xl object-cover" />}
+              <div>
+                <p className="font-black">{b.title}</p>
+                <p className="text-xs text-muted-foreground">{b.producer}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

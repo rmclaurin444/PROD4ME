@@ -20,7 +20,8 @@ import { ProducerProfile, ArtistProfile } from '@/components/app/profiles'
 import { InboxView, UserProfile } from '@/components/app/inbox'
 import { Comments, PostTrack, Offer } from '@/components/app/modals'
 import { EditProfile } from '@/components/app/edit-profile'
-import { beats, themes, getInitials } from '@/components/app/data'
+import { themes, getInitials } from '@/components/app/data'
+import type { ShapedBeat } from '@/lib/beats'
 import type { View } from '@/components/app/nav'
 
 const DEFAULT_BANNER =
@@ -36,7 +37,7 @@ type SessionUser = {
   theme?: string | null
 }
 
-export function AppShell({ user }: { user: SessionUser }) {
+export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat[] }) {
   const isArtist = user.role === 'ARTIST'
   const avatarText = getInitials(user.name)
 
@@ -44,23 +45,23 @@ export function AppShell({ user }: { user: SessionUser }) {
 
   const [view, setView] = useState<View>('feed')
   const [index, setIndex] = useState(0)
-  const [saved, setSaved] = useState<number[]>([])
-  const [liked, setLiked] = useState<number[]>([])
-  const [likeCounts, setLikeCounts] = useState<Record<number, number>>(
-    Object.fromEntries(beats.map((b, i) => [i, b.likes]))
+  const [saved, setSaved] = useState<string[]>([])
+  const [liked, setLiked] = useState<string[]>([])
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>(
+    Object.fromEntries(beats.map(b => [b.id, b.likes]))
   )
-  const [shareCounts, setShareCounts] = useState<Record<number, number>>(
-    Object.fromEntries(beats.map((b, i) => [i, b.shares]))
+  const [shareCounts, setShareCounts] = useState<Record<string, number>>(
+    Object.fromEntries(beats.map(b => [b.id, b.shares]))
   )
-  const [saveCounts, setSaveCounts] = useState<Record<number, number>>(
-    Object.fromEntries(beats.map((b, i) => [i, b.saves]))
+  const [saveCounts, setSaveCounts] = useState<Record<string, number>>(
+    Object.fromEntries(beats.map(b => [b.id, b.saves]))
   )
   const [tag, setTag] = useState<string | null>(null)
   const [offer, setOffer] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [addedComments, setAddedComments] = useState<
-    Record<number, { name: string; avatar: string; text: string }[]>
+    Record<string, { name: string; avatar: string; text: string }[]>
   >({})
   const [edit, setEdit] = useState(false)
   const [theme, setTheme] = useState(initialTheme)
@@ -77,9 +78,9 @@ export function AppShell({ user }: { user: SessionUser }) {
     'Juno Grey': 7300,
     'Trey Two': 6100,
   })
-  const [tracks, setTracks] = useState([
-    { title: 'Midnight in Atlanta', url: 'https://open.spotify.com/track/demo', beat: 'NIGHTSHIFT', art: beats[0].art },
-  ])
+  const [tracks, setTracks] = useState<
+    { title: string; url: string; beat: string; art: string | null }[]
+  >([])
   const [postOpen, setPostOpen] = useState(false)
   const [inboxTab, setInboxTab] = useState<'notifications' | 'messages'>('notifications')
   const [unread, setUnread] = useState(3)
@@ -108,30 +109,33 @@ export function AppShell({ user }: { user: SessionUser }) {
 
   const matches = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
   const filtered = tag ? beats.filter(b => b.tags.includes(tag)) : beats
-  const beat = filtered[index % filtered.length]
-  const beatIndex = beats.indexOf(beat)
+  const beat = filtered.length > 0 ? filtered[index % filtered.length] : null
+  const beatId = beat?.id ?? ''
   const toggleSave = () => {
-    const isSaved = saved.includes(beatIndex)
-    setSaved(v => (isSaved ? v.filter(i => i !== beatIndex) : [...v, beatIndex]))
-    setSaveCounts(c => ({ ...c, [beatIndex]: (c[beatIndex] ?? 0) + (isSaved ? -1 : 1) }))
+    if (!beatId) return
+    const isSaved = saved.includes(beatId)
+    setSaved(v => (isSaved ? v.filter(i => i !== beatId) : [...v, beatId]))
+    setSaveCounts(c => ({ ...c, [beatId]: (c[beatId] ?? 0) + (isSaved ? -1 : 1) }))
   }
 
   const toggleLike = () => {
-    const isLiked = liked.includes(beatIndex)
-    setLiked(v => (isLiked ? v.filter(i => i !== beatIndex) : [...v, beatIndex]))
-    setLikeCounts(c => ({ ...c, [beatIndex]: (c[beatIndex] ?? 0) + (isLiked ? -1 : 1) }))
+    if (!beatId) return
+    const isLiked = liked.includes(beatId)
+    setLiked(v => (isLiked ? v.filter(i => i !== beatId) : [...v, beatId]))
+    setLikeCounts(c => ({ ...c, [beatId]: (c[beatId] ?? 0) + (isLiked ? -1 : 1) }))
   }
 
   const handleShare = () => {
-    setShareCounts(c => ({ ...c, [beatIndex]: (c[beatIndex] ?? 0) + 1 }))
+    if (!beatId) return
+    setShareCounts(c => ({ ...c, [beatId]: (c[beatId] ?? 0) + 1 }))
   }
 
   const currentComments = [
     { name: 'Kai Rivers', avatar: 'KR', text: 'This one has such a clean pocket.' },
     { name: 'Nia Saint', avatar: 'NS', text: 'The texture on the drums is perfect.' },
-    ...(addedComments[beatIndex] ?? []),
+    ...(addedComments[beatId] ?? []),
   ]
-  const commentCount = (beat.comments ?? 0) + (addedComments[beatIndex]?.length ?? 0)
+  const commentCount = (beat?.comments ?? 0) + (addedComments[beatId]?.length ?? 0)
 
   const roleLabel = isArtist ? 'Artist' : 'Producer'
 
@@ -211,28 +215,38 @@ export function AppShell({ user }: { user: SessionUser }) {
               setMessages={setMessages}
             />
           ) : (
-            view === 'feed' && (
-              <Feed
-                beat={beat}
-                tag={tag}
-                onTag={setTag}
-                onClear={() => setTag(null)}
-                saved={saved.includes(beatIndex)}
-                onSave={toggleSave}
-                saveCount={saveCounts[beatIndex] ?? 0}
-                liked={liked.includes(beatIndex)}
-                onLike={toggleLike}
-                likeCount={likeCounts[beatIndex] ?? 0}
-                commentCount={commentCount}
-                onComment={() => setCommentsOpen(true)}
-                shareCount={shareCounts[beatIndex] ?? 0}
-                onShare={handleShare}
-                onOffer={() => setOffer(true)}
-                onNext={() => setIndex(v => v + 1)}
-                isArtist={isArtist}
-                onPoster={u => setProfileUser(users.find(x => x.name === u.name) ?? u)}
-              />
-            )
+            view === 'feed' &&
+              (beat ? (
+                <Feed
+                  beat={beat}
+                  tag={tag}
+                  onTag={setTag}
+                  onClear={() => setTag(null)}
+                  saved={saved.includes(beatId)}
+                  onSave={toggleSave}
+                  saveCount={saveCounts[beatId] ?? 0}
+                  liked={liked.includes(beatId)}
+                  onLike={toggleLike}
+                  likeCount={likeCounts[beatId] ?? 0}
+                  commentCount={commentCount}
+                  onComment={() => setCommentsOpen(true)}
+                  shareCount={shareCounts[beatId] ?? 0}
+                  onShare={handleShare}
+                  onOffer={() => setOffer(true)}
+                  onNext={() => setIndex(v => v + 1)}
+                  isArtist={isArtist}
+                  onPoster={u => setProfileUser(users.find(x => x.name === u.name) ?? u)}
+                />
+              ) : (
+                <div className="mx-auto w-full max-w-md flex-1 px-5 pb-28 pt-24 text-center">
+                  <h2 className="text-2xl font-black">No beats yet</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {isArtist
+                      ? 'Producers haven’t uploaded any beats yet. Check back soon.'
+                      : 'Upload your first beat from the Upload tab to see it here.'}
+                  </p>
+                </div>
+              ))
           )}
 
           {view === 'upload' && <UploadView />}
@@ -242,6 +256,7 @@ export function AppShell({ user }: { user: SessionUser }) {
               <ArtistProfile
                 tracks={tracks}
                 saved={saved}
+                beats={beats}
                 onPost={() => setPostOpen(true)}
                 onEdit={() => setEdit(true)}
                 banner={banner}
@@ -261,9 +276,9 @@ export function AppShell({ user }: { user: SessionUser }) {
               />
             ))}
 
-          {offer && <Offer onClose={() => setOffer(false)} beat={beat} />}
+          {offer && beat && <Offer onClose={() => setOffer(false)} beat={beat} />}
 
-          {commentsOpen && (
+          {commentsOpen && beat && (
             <Comments
               beat={beat}
               comments={currentComments}
@@ -273,8 +288,8 @@ export function AppShell({ user }: { user: SessionUser }) {
                 if (commentDraft.trim()) {
                   setAddedComments(prev => ({
                     ...prev,
-                    [beatIndex]: [
-                      ...(prev[beatIndex] ?? []),
+                    [beatId]: [
+                      ...(prev[beatId] ?? []),
                       { name: user.name, avatar: avatarText, text: commentDraft.trim() },
                     ],
                   }))
@@ -288,6 +303,7 @@ export function AppShell({ user }: { user: SessionUser }) {
           {postOpen && (
             <PostTrack
               saved={saved}
+              beats={beats}
               onClose={() => setPostOpen(false)}
               onPublish={(track: any) => {
                 setTracks(v => [...v, track])

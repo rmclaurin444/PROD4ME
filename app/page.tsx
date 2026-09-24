@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getBeats } from '@/lib/beats'
 import { AppShell } from '@/components/app/app-shell'
 
 export default async function Page() {
@@ -18,6 +19,8 @@ export default async function Page() {
     redirect('/login')
   }
 
+  const beats = await getBeats()
+
   return (
     <AppShell
       user={{
@@ -29,6 +32,7 @@ export default async function Page() {
         banner: user.banner,
         theme: user.theme,
       }}
+      beats={beats}
     />
   )
 }

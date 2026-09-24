@@ -24,4 +24,40 @@ model User {
   theme     String?  @default("acid")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  beats     Beat[]
+}
+
+model Beat {
+  id          String   @id @default(cuid())
+  title       String
+  bpm         Int?
+  musicalKey  String?
+  price       Int      @default(0)
+  audioKey    String
+  artKey      String?
+  artUrl      String?
+  artPreset   String?
+  peaks       Json?
+  durationSec Int?
+  plays       Int      @default(0)
+  likes       Int      @default(0)
+  saves       Int      @default(0)
+  shares      Int      @default(0)
+  comments    Int      @default(0)
+  producerId  String
+  producer    User     @relation(fields: [producerId], references: [id], onDelete: Cascade)
+  tags        Tag[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([producerId])
+  @@index([createdAt])
+}
+
+model Tag {
+  id       String @id @default(cuid())
+  name     String @unique
+  slug     String @unique
+  useCount Int    @default(0)
+  beats    Beat[]
 }

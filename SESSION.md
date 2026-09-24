@@ -1,8 +1,8 @@
 # PROD4ME — Session Notes
 
-**Date:** 2026-09-16
+**Date:** 2026-09-16 (updated 2026-09-23)
 **Branch:** `loginndstuff`
-**Status:** Login + account creation with role selection — **complete and verified**. UI engagement polish — **complete**. Awaiting next user stories.
+**Status:** Story 1 (login + account creation with role) — **complete**. UI engagement polish — **complete**. Story 2 (beat upload with MinIO) — **complete and verified**. Story 3 (SoundCloud-style waveform) — **code complete, `tsc --noEmit` clean; end-to-end browser verification and `pnpm build` still outstanding**. Audio playback added to feed. pnpm store corruption fixed — local Prisma CLI working.
 
 ---
 
@@ -33,6 +33,33 @@ Originally a v0.app-generated clickable prototype: single monolithic `app/page.t
 
 ## Completed Work
 
+### Story 3 — SoundCloud-style waveform (code complete, 2026-09-23)
+
+> As a user, I want to see a visual waveform that mirrors the actual audio file's amplitude as I browse beats so that I can see the structure and dynamics of a beat at a glance and scrub through it to preview sections.
+
+**Steps completed:**
+
+1. ✅ Database: `peaks` JSONB column added to `Beat` model (migration `20260921173411_add_beat_peaks`)
+2. ✅ Peak computation: `lib/upload-client.ts#computePeaksFromBuffer()` uses Web Audio API to decode audio → extract 128 bars → normalize by loudest peak
+3. ✅ Feed shape: `lib/beats.ts#ShapedBeat` includes `peaks: number[] | null`
+4. ✅ API validation: `app/api/beats/route.ts` validates peaks (array, ≤256 bars, each 0–1), stores as JSON; fixed TS errors with `Prisma.JsonNull`
+5. ✅ Waveform component: `components/app/waveform.tsx` — 128 lime-300/white-25 mirrored bars, click+drag seek, 0:00/duration time labels, accessibility (role=slider, aria-valuenow)
+6. ✅ Upload form: `components/app/upload.tsx` computes peaks on audio select, sends with metadata to `/api/beats`
+7. ✅ Feed integration: `components/app/feed.tsx` — imports `Waveform`, module-level `peaksCache` for old beats, state for `currentTime/duration/fallbackPeaks`, effect for on-demand peak computation if beat lacks stored peaks, `seek()` handler, audio event listeners (`onTimeUpdate/onLoadedMetadata/onDurationChange`), renders `<Waveform>` below beat metadata
+8. ⏳ Verification: TypeScript clean (`pnpm exec tsc --noEmit` passes); awaiting manual browser test + `pnpm build`
+
+**Key decisions:**
+- **Peak computation:** 128 bars @ normalized 0–1 scale, computed at upload and cached in memory for old beats
+- **Fallback:** beats without stored peaks (seeded test beats) fetch presigned audio URL and decode client-side on first view, cached in module-level Map
+- **Seek UI:** pointer-capture drag or click-to-seek on the waveform rail, fraction-based (0–1) to audio.duration
+- **Styling:** lime-300 for played bars, white/25 for unplayed; 8px min height for visibility
+
+**Outstanding:**
+- Browser verification: upload a beat → confirm waveform renders with varying bar heights; view seeded beat → confirm on-demand fallback peaks compute and render
+- `pnpm build` to confirm production build succeeds
+
+---
+
 ### Story 1 — Account creation with fixed role
 
 > As a user, I want to choose either Producer or Artist when creating my account so that my role is fixed and the app shows the right tools for me.
@@ -48,6 +75,20 @@ Originally a v0.app-generated clickable prototype: single monolithic `app/page.t
 
 5. ✅ Share button made fully functional
 6. ✅ TikTok-style engagement counts (likes / comments / shares) under each icon
+
+### Story 2 — Producer uploads a beat
+
+> As a producer, I want to upload a beat with title, BPM, key, price, tags, and custom artwork so that artists can find and evaluate it.
+
+**Subtasks — all done:**
+
+1. ✅ Upload form layout (title, BPM, key, price)
+2. ✅ Artwork upload slot (image/GIF/video) + 6 preset gradient placeholders
+3. ✅ Tag input with chip rendering, add-on-Enter/comma, backspace-delete
+4. ✅ Tag autocomplete against existing tag list (new tags allowed)
+5. ✅ Audio file uploads — presigned PUT direct to MinIO
+
+**Decisions:** MinIO via Docker Compose (dev+prod parity) · official `minio` SDK · presigned PUT (file never passes through Next.js) · feed reads from DB · tags allow free creation.
 
 ---
 
@@ -140,6 +181,33 @@ AUTH_SECRET="dev-secret-change-me-in-production"
 
 ---
 
+### Beat upload architecture
+
+- **Docker Compose** runs MinIO (`quay.io/minio/minio`) on `:9000` (API) and `:9001` (console). An `mc` init container creates `beat-audio` (private) and `beat-artwork` (public-read).
+- **Upload flow:** client `POST /api/uploads/presign` → server validates (auth, role=PRODUCER, mime, size) and returns a presigned PUT URL → client `PUT`s the file straight to MinIO (XHR for progress) → client `POST /api/beats` to save metadata + object keys. **No file bytes ever pass through Next.js**, so there is no body-size limit to configure.
+- **Storage layer** `lib/storage.ts` — MinIO client, `presignUpload`, `presignDownload`, `publicUrl`, `deleteObject`. Audio served via short-lived presigned GET; artwork via public bucket URL.
+- **Keys** namespaced `audio/{userId}/{uuid}.{ext}` and `artwork/{userId}/{uuid}.{ext}`.
+- **Artwork presets:** if no file is uploaded, `artPreset` is stored and `Feed` renders the matching CSS gradient instead of an image.
+- **Limits:** audio ≤250MB (mp3/wav/aiff/flac), artwork ≤20MB (png/jpg/gif/webp/mp4/webm).
+- **Audio playback:** `Feed` renders a hidden `<audio src={beat.audioUrl} loop>`. Browsers block unmuted autoplay, so it **autoplays muted** and the user unmutes via a Volume button at the top of the action rail (TikTok behaviour). If the object is missing, `onError` disables the button and shows "No audio".
+- **Gotcha:** the 4 seeded beats reference `seed/*.mp3` keys that do not exist in MinIO, so they show "No audio". Only beats uploaded through the UI have real audio.
+
+### Schema (current)
+
+```prisma
+model Beat {
+  id, title, bpm?, musicalKey?, price
+  audioKey, artKey?, artUrl?, artPreset?
+  durationSec?
+  plays, likes, saves, shares, comments  (denormalized counters)
+  producerId -> User, tags -> Tag[]
+  createdAt, updatedAt
+}
+model Tag { id, name @unique, slug @unique, useCount }
+```
+
+`useCount` powers autocomplete ranking. `lib/beats.ts` `getBeats()` is the single shaping function shared by `app/page.tsx` and `GET /api/beats`.
+
 ## Setup Gotchas (important for future sessions)
 
 1. **Next.js 16 renamed `middleware.ts` → `proxy.ts`.** Must export a *function* (default export). Use `export default NextAuth(authConfig).auth`. The old `middleware.ts` will fail the build.
@@ -148,6 +216,10 @@ AUTH_SECRET="dev-secret-change-me-in-production"
 4. **`pnpm` is a .ps1 script** — can't be launched via `Start-Process -FilePath pnpm`; use `cmd.exe /c pnpm dev > dev.log 2>&1`.
 5. **PostgreSQL wouldn't start** — stale `postmaster.pid` after repeated improper shutdowns, plus very long recovery (>220s) exceeding the Windows service timeout. Fixed by a full uninstall/reinstall of PostgreSQL.
 6. **`.gitignore`** — `.env` added (was only `.env*.local`). Also ignores `tsconfig.tsbuildinfo`, `dev.log`, `dev.err.log`.
+7. **MinIO is NOT on Docker Hub anymore** — `docker pull minio/minio` fails with "repository does not exist". Use `quay.io/minio/minio` and `quay.io/minio/mc`. (Both images currently use `:latest`; pinning a release tag is optional hardening.)
+8. **~~Local Prisma CLI is broken~~ RESOLVED (2026-09-21)** — pnpm's store entry for `prisma@6.19.3` was missing its `build/` folder, so `pnpm exec prisma` failed with MODULE_NOT_FOUND. `pnpm install --force`, remove/re-add, and `pnpm store prune` all failed to fix it (prune keeps *referenced* entries). **The fix that worked:** stop the dev server, delete `C:\Users\Rah\AppData\Local\pnpm\store\v11` AND `node_modules` entirely, then `pnpm install --force` (~13 min). Verified working: `prisma generate`, `prisma migrate status` (3 migrations, in sync). The isolated temp CLI workaround has been deleted.
+9. **`prisma generate` hits EPERM** if the dev server is running (query engine DLL is locked). Stop node processes first, generate, then restart.
+10. **Slow filesystem gotchas** — PowerShell `Remove-Item -Recurse` is far too slow for huge trees (the pnpm store has ~50K+ files; it timed out at 15 min). Use `cmd /c "rmdir /s /q <path>"` instead. Also expect `pnpm remove`/full installs to take minutes; `pnpm install --force` from an empty store took ~13 min. If store corruption ever recurs after a fix, suspect pnpm 12 (very new major) or antivirus interference — consider pinning pnpm to latest stable v10/v11 or excluding `node_modules` from Defender.
 
 ---
 
@@ -180,15 +252,35 @@ AUTH_SECRET="dev-secret-change-me-in-production"
 | `producer@test.com` | PRODUCER |
 | `artist@test.com` | ARTIST |
 
-*These were created during testing — delete them when no longer needed.*
+Seeded producers (also `password123`): `melok@prod4me.dev`, `niasaint@prod4me.dev`, `junogrey@prod4me.dev`, `treytwo@prod4me.dev` — these own the 4 seeded beats.
+
+Run `pnpm seed` to (re)seed. Note seeded beats reference audio keys (`seed/*.mp3`) that don't exist in MinIO, so they won't play — only artwork/UI works.
+
+*Test accounts were created during testing — delete them when no longer needed.*
 
 ---
 
 ## Current Runtime State
 
 - PostgreSQL service: **running**
+- Docker Desktop: **running**; MinIO container `prod4me-minio` **healthy** on `:9000` / console `:9001`
 - Dev server: **running** at http://localhost:3000
-- Dependency install command: `pnpm add prisma@6 @prisma/client@6 next-auth@beta bcryptjs`
+- Start stack: `docker compose up -d` then `pnpm dev`
+
+## Story 2 Verification
+
+| Test | Result |
+|---|---|
+| `docker compose up -d` | MinIO healthy, buckets + public-read + CORS applied |
+| Presign audio (producer) | Returns key + presigned PUT URL |
+| Presign rejects non-producer / bad mime / oversize | Enforced server-side |
+| Browser→MinIO PUT | 200 (audio and artwork) |
+| Artwork public GET without auth | 200 (public bucket) |
+| Create beat with existing + brand-new tag | Both linked; `useCount` incremented |
+| Tag autocomplete `/api/tags?q=` | Returns ranked matches incl. newly created |
+| Artwork preset persisted | `artPreset` stored; feed renders gradient |
+| Feed reads from DB | Seeded + uploaded beats render |
+| `tsc --noEmit` / `pnpm build` | Clean / succeeds |
 
 ---
 
@@ -205,10 +297,15 @@ Relevant DB columns already exist (`bio`, `banner`, `theme`) for profile persist
 
 ## Next Steps
 
-**User has 2 more user stories to provide.** Awaiting them before continuing.
+**Waveform story near-complete.** Before next stories:
+1. Start Docker Desktop → `docker compose up -d` (MinIO)
+2. `pnpm dev` to start Next.js
+3. Browser: upload a beat, confirm waveform renders (bars should vary in height matching audio amplitude)
+4. Browser: view a seeded beat (e.g., "NIGHTSHIFT"), confirm fallback peak computation runs on first view and waveform renders
+5. Terminal: `pnpm build` to confirm production build succeeds
+6. Report any issues or confirm ready for next story
 
 When resuming:
 1. Read this file
-2. Confirm dev server + PostgreSQL are running
-3. Ask for the next user stories
-4. Continue on branch `loginndstuff`
+2. Confirm dev server + PostgreSQL + Docker are running
+3. Continue on branch `loginndstuff`

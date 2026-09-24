@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Check, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/app/ui'
-import { beats } from '@/components/app/data'
+import type { ShapedBeat } from '@/lib/beats'
 
 export function Comments({ beat, comments, draft, setDraft, onPost, onClose }: any) {
   return (
@@ -52,11 +52,21 @@ export function Comments({ beat, comments, draft, setDraft, onPost, onClose }: a
   )
 }
 
-export function PostTrack({ saved, onClose, onPublish }: any) {
+export function PostTrack({
+  saved,
+  beats,
+  onClose,
+  onPublish,
+}: {
+  saved: string[]
+  beats: ShapedBeat[]
+  onClose: () => void
+  onPublish: (track: { title: string; url: string; beat: string; art: string | null }) => void
+}) {
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
-  const [choice, setChoice] = useState(saved[0] ?? 0)
-  const beat = beats[choice]
+  const [choice, setChoice] = useState(saved[0] ?? '')
+  const beat = beats.find(b => b.id === choice) ?? beats[0]
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5">
@@ -92,23 +102,23 @@ export function PostTrack({ saved, onClose, onPublish }: any) {
           </label>
           <label className="text-xs font-bold text-muted-foreground">
             Beat used
-            <select
-              value={choice}
-              onChange={e => setChoice(Number(e.target.value))}
-              className="input mt-2"
-            >
-              {(saved.length ? saved : [0]).map((i: number) => (
-                <option key={i} value={i}>
-                  {beats[i].title} · {beats[i].producer}
-                </option>
-              ))}
+            <select value={choice} onChange={e => setChoice(e.target.value)} className="input mt-2">
+              {(saved.length ? saved : beats.slice(0, 1).map(b => b.id)).map((id: string) => {
+                const b = beats.find(x => x.id === id)
+                if (!b) return null
+                return (
+                  <option key={id} value={id}>
+                    {b.title} · {b.producer}
+                  </option>
+                )
+              })}
             </select>
           </label>
         </div>
 
         <Button
-          disabled={!title || !url}
-          onClick={() => onPublish({ title, url, beat: beat.title, art: beat.art })}
+          disabled={!title || !url || !beat}
+          onClick={() => onPublish({ title, url, beat: beat.title, art: beat.artUrl })}
           className="mt-6 w-full bg-lime-300 font-black text-black"
         >
           <Check data-icon="inline-start" /> Publish to profile

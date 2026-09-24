@@ -1,0 +1,42 @@
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: prod4me-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    container_name: prod4me-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin};
+      mc mb --ignore-existing local/${MINIO_BUCKET_AUDIO:-beat-audio};
+      mc mb --ignore-existing local/${MINIO_BUCKET_ARTWORK:-beat-artwork};
+      mc anonymous set download local/${MINIO_BUCKET_ARTWORK:-beat-artwork};
+      echo 'MinIO initialized: buckets created, artwork public-read';
+      "
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_AUDIO: ${MINIO_BUCKET_AUDIO:-beat-audio}
+      MINIO_BUCKET_ARTWORK: ${MINIO_BUCKET_ARTWORK:-beat-artwork}
+
+volumes:
+  minio-data:

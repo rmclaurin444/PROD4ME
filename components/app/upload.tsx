@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Beat upload form for producers.
+ * Handles audio/artwork selection, waveform peak computation, direct-to-MinIO upload,
+ * and beat metadata submission to /api/beats.
+ */
 import { useState } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,9 +13,11 @@ import { ArtworkSlot } from '@/components/app/artwork-slot'
 import { AudioDropzone } from '@/components/app/audio-dropzone'
 import { readAudioDuration, uploadWithProgress, computePeaks } from '@/lib/upload-client'
 
+// Client-side size validation mirrors server-side limits
 const AUDIO_MAX = 250 * 1024 * 1024
 const ARTWORK_MAX = 20 * 1024 * 1024
 
+/** Request a presigned PUT URL from the server for direct browser upload */
 async function presign(kind: 'audio' | 'artwork', file: File) {
   const res = await fetch('/api/uploads/presign', {
     method: 'POST',
@@ -44,6 +51,7 @@ export function UploadView() {
 
   const busy = stage !== null
 
+  /** Process selected audio file: validate size, extract duration and waveform peaks */
   const handleAudio = async (file: File) => {
     setError('')
     if (file.size > AUDIO_MAX) {
@@ -51,6 +59,7 @@ export function UploadView() {
       return
     }
     setAudioFile(file)
+    // Compute duration and peaks in parallel before upload
     const [d, peaks] = await Promise.all([readAudioDuration(file), computePeaks(file)])
     setAudioDuration(d)
     setAudioPeaks(peaks)
@@ -82,6 +91,10 @@ export function UploadView() {
     setDone(false)
   }
 
+  /**
+   * Publish beat: upload artwork (if any) → upload audio → save metadata.
+   * Files go directly to MinIO via presigned URLs; only metadata hits the API.
+   */
   const handlePublish = async () => {
     setError('')
 
@@ -97,6 +110,7 @@ export function UploadView() {
     try {
       let artKey: string | null = null
 
+      // Step 1: Upload artwork if provided
       if (artworkFile) {
         setStage('Uploading artwork')
         setProgress(0)
@@ -105,11 +119,13 @@ export function UploadView() {
         artKey = key
       }
 
+      // Step 2: Upload audio
       setStage('Uploading audio')
       setProgress(0)
       const audio = await presign('audio', audioFile)
       await uploadWithProgress(audio.uploadUrl, audioFile, setProgress)
 
+      // Step 3: Save beat metadata (object keys, peaks, tags, etc.)
       setStage('Saving beat')
       const res = await fetch('/api/beats', {
         method: 'POST',
@@ -122,7 +138,7 @@ export function UploadView() {
           tags,
           audioKey: audio.key,
           artKey,
-          artPreset: artKey ? null : artworkPreset,
+          artPreset: artKey ? null : artworkPreset,  // Use preset only if no artwork uploaded
           peaks: audioPeaks,
           durationSec: audioDuration,
         }),

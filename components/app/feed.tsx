@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Full-screen TikTok-style beat feed.
+ * Displays one beat at a time with artwork, waveform, and engagement actions.
+ * Audio autoplays muted (browser policy); user unmutes via volume button.
+ */
 import { useEffect, useRef, useState } from 'react'
 import { Bookmark, Heart, MessageCircle, Share2, Volume2, VolumeX, X } from 'lucide-react'
 import { Avatar, TagPills } from '@/components/app/ui'
@@ -8,6 +13,7 @@ import { ARTWORK_PRESETS } from '@/components/app/artwork-slot'
 import { Waveform } from '@/components/app/waveform'
 import { computePeaksFromBuffer } from '@/lib/upload-client'
 
+/** Resolve artwork preset ID to CSS gradient */
 function presetCss(id: string | null) {
   return (
     ARTWORK_PRESETS.find(p => p.id === id)?.css ??
@@ -15,6 +21,7 @@ function presetCss(id: string | null) {
   )
 }
 
+// Cache computed peaks for beats without stored waveform data (e.g., seeded beats)
 const peaksCache = new Map<string, number[]>()
 
 function ActionButton({
@@ -101,6 +108,7 @@ export function Feed({
   const [duration, setDuration] = useState(0)
   const [fallbackPeaks, setFallbackPeaks] = useState<number[] | null>(null)
 
+  // Reset state and start playback when beat changes
   useEffect(() => {
     setAudioFailed(false)
     setSoundOn(false)
@@ -108,6 +116,7 @@ export function Feed({
     setDuration(0)
     setFallbackPeaks(null)
 
+    // Autoplay muted (browsers block unmuted autoplay)
     const a = audioRef.current
     if (a) {
       a.muted = true
@@ -115,12 +124,14 @@ export function Feed({
       a.play().catch(() => {})
     }
 
+    // On-demand waveform computation for beats without stored peaks
     let cancelled = false
     if (!beat.peaks && beat.audioUrl) {
       const cached = peaksCache.get(beat.id)
       if (cached) {
         setFallbackPeaks(cached)
       } else {
+        // Fetch audio and decode to compute peaks client-side
         fetch(beat.audioUrl)
           .then(res => res.arrayBuffer())
           .then(buf => computePeaksFromBuffer(buf))
@@ -154,6 +165,7 @@ export function Feed({
     }
   }
 
+  /** Seek to position in track (called by Waveform's onSeek with 0-1 fraction) */
   const seek = (fraction: number) => {
     const a = audioRef.current
     if (!a || audioFailed) return
@@ -163,6 +175,7 @@ export function Feed({
     setCurrentTime(a.currentTime)
   }
 
+  /** Share via native share API or fall back to clipboard copy */
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/?beat=${encodeURIComponent(beat.title)}`
     const shareData = {

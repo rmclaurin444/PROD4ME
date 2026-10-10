@@ -1,3 +1,9 @@
+/**
+ * Browser-side upload utilities.
+ * Handles audio duration/waveform extraction and direct-to-storage uploads with progress.
+ */
+
+/** Extract audio duration (seconds) from a File using an offscreen audio element */
 export function readAudioDuration(file: File): Promise<number | null> {
   return new Promise(resolve => {
     const url = URL.createObjectURL(file)
@@ -21,11 +27,17 @@ export function readAudioDuration(file: File): Promise<number | null> {
   })
 }
 
+/**
+ * Extract waveform peaks from decoded audio data.
+ * Divides audio into `bars` segments, finds max amplitude in each, normalizes to 0–1.
+ * Used for SoundCloud-style waveform visualization.
+ */
 export async function computePeaksFromBuffer(
   arrayBuffer: ArrayBuffer,
   bars = 128
 ): Promise<number[] | null> {
   try {
+    // Safari fallback for webkitAudioContext
     const AudioCtx =
       window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AudioCtx) return null
@@ -38,8 +50,10 @@ export async function computePeaksFromBuffer(
       ctx.close()
     }
 
+    // Use first channel only (mono or left of stereo)
     const channel = audioBuffer.getChannelData(0)
     const block = Math.floor(channel.length / bars) || 1
+    // Sample every ~200th sample within each block for performance
     const stride = Math.max(1, Math.floor(block / 200))
     const peaks: number[] = []
 
@@ -54,6 +68,7 @@ export async function computePeaksFromBuffer(
       peaks.push(max)
     }
 
+    // Normalize so loudest bar = 1.0, stored to 3 decimal places
     const loudest = Math.max(...peaks)
     return loudest > 0 ? peaks.map(p => Math.round((p / loudest) * 1000) / 1000) : peaks
   } catch {
@@ -61,6 +76,7 @@ export async function computePeaksFromBuffer(
   }
 }
 
+/** Convenience wrapper: read File as ArrayBuffer then compute peaks */
 export async function computePeaks(file: File, bars = 128): Promise<number[] | null> {
   try {
     const arrayBuffer = await file.arrayBuffer()
@@ -70,6 +86,10 @@ export async function computePeaks(file: File, bars = 128): Promise<number[] | n
   }
 }
 
+/**
+ * Upload file directly to presigned URL with progress callback.
+ * Uses XHR instead of fetch because fetch doesn't support upload progress events.
+ */
 export function uploadWithProgress(
   url: string,
   file: File,

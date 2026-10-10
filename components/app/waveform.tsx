@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * SoundCloud-style waveform visualization with seek functionality.
+ * Renders amplitude bars (lime when played, white when unplayed),
+ * supports click/drag seeking via pointer capture.
+ */
 import { useRef } from 'react'
 
 const BAR_COUNT = 128
@@ -13,15 +18,16 @@ export function Waveform({
   disabled,
 }: {
   peaks: number[] | null
-  progress: number
-  currentTime: number
-  duration: number
-  onSeek: (fraction: number) => void
+  progress: number         // 0-1, portion of track played
+  currentTime: number      // seconds elapsed
+  duration: number         // total seconds
+  onSeek: (fraction: number) => void  // called with 0-1 position
   disabled?: boolean
 }) {
   const railRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
 
+  // Fall back to flat bars if no peak data (seeded beats without audio)
   const values =
     peaks && peaks.length > 0 ? peaks : Array(BAR_COUNT).fill(0.12)
 

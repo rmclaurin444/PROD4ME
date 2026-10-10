@@ -49,6 +49,7 @@ model Beat {
   tags        Tag[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
 
   @@index([producerId])
   @@index([createdAt])

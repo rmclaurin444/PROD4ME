@@ -1,3 +1,8 @@
+/**
+ * Presigned upload URL endpoint.
+ * Validates auth, role, MIME type, and file size before issuing a presigned PUT URL.
+ * The browser then uploads directly to MinIO — file bytes never pass through Next.js.
+ */
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import {
@@ -19,6 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Only producers can upload beats
   if (session.user.role !== 'PRODUCER') {
     return NextResponse.json({ error: 'Only producers can upload beats' }, { status: 403 })
   }

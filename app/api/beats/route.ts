@@ -1,9 +1,15 @@
+/**
+ * Beats API.
+ * GET: List all beats (shaped for feed consumption).
+ * POST: Create a new beat (producers only). Audio/artwork already uploaded via presign.
+ */
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { beatInclude, getBeats } from '@/lib/beats'
 
+/** Convert tag name to URL-safe slug */
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -12,6 +18,7 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
+/** Validate waveform peaks array: 1-256 numbers, each 0–1 */
 function isValidPeaks(p: unknown): p is number[] {
   return (
     Array.isArray(p) &&
@@ -73,6 +80,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Price must be between 0 and 600' }, { status: 400 })
   }
 
+  // Dedupe, lowercase, limit to 8 tags of max 24 chars each
   const cleanTags = Array.from(
     new Set(
       (tags ?? [])
@@ -105,6 +113,7 @@ export async function POST(request: Request) {
       include: beatInclude,
     })
 
+    // Increment useCount for all tags linked to this beat (powers autocomplete ranking)
     const createdTags = await prisma.tag.findMany({
       where: { beats: { some: { id: beat.id } } },
       select: { id: true },

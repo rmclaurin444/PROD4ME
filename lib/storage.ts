@@ -1,12 +1,18 @@
+/**
+ * MinIO (S3-compatible) storage utilities.
+ * Handles presigned URLs for direct browser uploads and public/private bucket access.
+ */
 import * as Minio from 'minio'
 
 const endPoint = process.env.MINIO_ENDPOINT ?? 'localhost'
 const port = Number(process.env.MINIO_PORT ?? 9000)
 const useSSL = process.env.MINIO_USE_SSL === 'true'
 
+// Audio bucket is private (presigned GET); artwork bucket is public-read
 export const BUCKET_AUDIO = process.env.MINIO_BUCKET_AUDIO ?? 'beat-audio'
 export const BUCKET_ARTWORK = process.env.MINIO_BUCKET_ARTWORK ?? 'beat-artwork'
 
+// Allowed MIME types for upload validation
 export const AUDIO_MIME_TYPES = [
   'audio/mpeg',
   'audio/mp3',
@@ -28,9 +34,11 @@ export const ARTWORK_MIME_TYPES = [
   'video/webm',
 ]
 
+// Size limits enforced server-side before issuing presigned URLs
 export const MAX_AUDIO_BYTES = 250 * 1024 * 1024
 export const MAX_ARTWORK_BYTES = 20 * 1024 * 1024
 
+// Singleton client — avoids reconnecting on every request
 let client: Minio.Client | null = null
 
 function getClient() {
@@ -46,21 +54,25 @@ function getClient() {
   return client
 }
 
+/** Generate a unique object key: {kind}/{userId}/{uuid}.{ext} */
 export function buildKey(kind: 'audio' | 'artwork', userId: string, ext: string) {
   const safeExt = ext.replace(/^\./, '').toLowerCase() || 'bin'
   const id = crypto.randomUUID()
   return `${kind}/${userId}/${id}.${safeExt}`
 }
 
+/** Direct URL for public buckets (artwork). Not usable for private buckets. */
 export function publicUrl(bucket: string, key: string) {
   const protocol = useSSL ? 'https' : 'http'
   return `${protocol}://${endPoint}:${port}/${bucket}/${key}`
 }
 
+/** Presigned PUT URL — browser can upload directly without credentials */
 export async function presignUpload(bucket: string, key: string, expirySeconds = 900) {
   return getClient().presignedPutObject(bucket, key, expirySeconds)
 }
 
+/** Presigned GET URL — time-limited access to private objects (audio) */
 export async function presignDownload(bucket: string, key: string, expirySeconds = 3600) {
   return getClient().presignedGetObject(bucket, key, expirySeconds)
 }
@@ -69,6 +81,7 @@ export async function deleteObject(bucket: string, key: string) {
   return getClient().removeObject(bucket, key)
 }
 
+/** Map MIME type to file extension for building object keys */
 export function extensionFromMime(mime: string) {
   const map: Record<string, string> = {
     'audio/mpeg': 'mp3',

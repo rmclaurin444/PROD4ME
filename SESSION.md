@@ -1,8 +1,8 @@
 # PROD4ME — Session Notes
 
-**Date:** 2026-09-16 (updated 2026-09-23)
-**Branch:** `loginndstuff`
-**Status:** Story 1 (login + account creation with role) — **complete**. UI engagement polish — **complete**. Story 2 (beat upload with MinIO) — **complete and verified**. Story 3 (SoundCloud-style waveform) — **code complete, `tsc --noEmit` clean; end-to-end browser verification and `pnpm build` still outstanding**. Audio playback added to feed. pnpm store corruption fixed — local Prisma CLI working.
+**Date:** 2026-09-16 (updated 2026-10-12)
+**Branch:** `ecommerce-section`
+**Status:** Sprint 1 (login, upload, waveform, feed) — complete. **Sprint 2 (offers & purchases, Stripe test mode) — code complete.** tsc --noEmit clean, pnpm build clean, all new routes smoke-tested. Stripe keys + CLI webhook testing pending (see Sprint 2 section below).
 
 ---
 
@@ -308,4 +308,44 @@ Relevant DB columns already exist (`bio`, `banner`, `theme`) for profile persist
 When resuming:
 1. Read this file
 2. Confirm dev server + PostgreSQL + Docker are running
-3. Continue on branch `loginndstuff`
+3. Continue on branch `ecommerce-section`
+
+---
+
+# Sprint 2 — Offers & Purchases (2026-10-12, branch `ecommerce-section`)
+
+## Schema (migration `20261012200630_add_offers_payments_licenses`)
+
+- New enums: `LicenseType { NON_EXCLUSIVE, EXCLUSIVE }`, `OfferStatus { PENDING, COUNTERED, DECLINED, AWAITING_PAYMENT, PAID, EXPIRED }`, `PaymentStatus { PENDING, SUCCEEDED, FAILED, REFUNDED }`.
+- New models: `Offer` (snapshot `listingPriceCents`, `amountCents`, counter/agreed cents, message/counterMessage, `expiresAt`), `Payment` (`stripeSessionId @unique`, `stripePaymentIntentId?`, `offerId? @unique`), `License` (`@@unique([beatId, artistId, licenseType])`, `pricePaidCents`, `paymentId?/offerId?`).
+- `Beat` gains `exclusivePriceCents Int?` and `exclusiveSold Boolean @default(false)`. **`Beat.price` remains integer DOLLARS (Sprint 1 convention) — converted to cents (`price * 100`) only at the Stripe boundary. ALL other money fields are Int cents.**
+- Indexes: `Offer(producerId, status)`, `Offer(artistId)`, `Offer(status, expiresAt)`, `License(artistId)`.
+
+## Files
+
+| Area | Files |
+|---|---|
+| Lib | `lib/money.ts` (pure, client-safe), `lib/offers.ts` (expiry helper `expireStaleOffers()`, shaping), `lib/licenses.ts` (artist library), `lib/stripe.ts`, `lib/finalize.ts` (webhook finalizer, shared) |
+| APIs | `POST/GET /api/offers` (create/list, role-aware), `PATCH /api/offers/[id]` (accept/counter/decline/accept-counter), `POST /api/licenses/free`, `GET /api/licenses`, `GET /api/licenses/[id]/download` (auth'd attachment presigned download — artist owning the license only), `POST+GET /api/checkout` (GET = status polling for success page), `POST /api/webhooks/stripe`, `GET /api/cron/expire-offers`, `PATCH /api/beats/[id]` (price + exclusive price), `POST /api/beats` extended with `exclusivePrice` |
+| UI | `components/app/purchase-modal.tsx` (license selector, Buy Now confirm → Stripe, Make Offer w/ inline validation, Get Free), `components/app/offers-inbox.tsx` (shared producer/artist offers tab), `components/app/price-editor.tsx`, `components/app/checkout-success.tsx` + `app/checkout/success/page.tsx`, `app/page.tsx` (loads `library` + `openOffers`) — ArtistProfile library cards get a Download button (attachment presign, downloads the original uploaded audio) |
+
+## Rules implemented
+
+- 48h expiry: `expiresAt` reset on every waiting-status change; null on terminal. `expireStaleOffers()` runs at the start of `/api/offers` GET, `/api/checkout` POST, webhook, and cron. Expired offers 409 with "expired" message; UI shows "Expires in Xm/Xh" + Expired badge.
+- Stripe Checkout: amount looked up server-side (never client), `expires_at = min(24h, offer expiry)`, prior open session for the offer/beat is expired + payment FAILED before a new "Pay now" session, session metadata `{paymentId, beatId, artistId, licenseType, offerId}`.
+- Webhook: signature verified, idempotent (SUCCEEDED payment → no-op), one `$transaction` = Payment SUCCEEDED + License + Offer PAID + exclusive close-out (Beat.exclusiveSold + auto-DECLINE other waiting offers). Late payments still grant license unless exclusive already sold → refund via `stripe.refunds.create`.
+- Checkout also re-checks exclusive availability before creating the session (409 "already sold"), and blocks duplicate licenses (`@@unique`).
+- Free flow: `$0` non-exclusive → `Get Free` creates License (no Payment); server rejects offers/checkout on it.
+
+## Setup pending (user actions)
+
+1. Paste Stripe **test** keys into `.env.local`: `STRIPE_SECRET_KEY=sk_test_...`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...` (checkout returns 503 with a clear message until keys exist).
+2. `stripe login` then `stripe listen --forward-to localhost:3000/api/webhooks/stripe` → paste the printed `whsec_...` into `STRIPE_WEBHOOK_SECRET` (restart dev server).
+3. Test cards: `4242 4242 4242 4242` (success), `4000 0000 0000 0002` (declined). Success page polls payment status and only renders a message (never writes).
+
+## Interpretations / gaps
+
+- Offers require ≥ $0.50 (no $0 offers; $0 is reserved for the Free flow). Counters also ≥ $0.50 and ≤ listing snapshot.
+- There was **no beat edit form** in Sprint 1 — Sprint 2 added price editing via the Dashboard and Producer Profile (`PriceEditor` → `PATCH /api/beats/[id]`), including the exclusive field, disabled after exclusive sale.
+- Producer can decline only PENDING offers; artist can decline only their COUNTERED offer. Artist cannot counter (producers move first).
+- Seeded data patched: `NIGHTSHIFT` exclusive $499; `LATE CHECKOUT` price 0 (FREE). `pnpm seed` backfills for fresh databases.

@@ -65,8 +65,31 @@ export async function presignDownload(bucket: string, key: string, expirySeconds
   return getClient().presignedGetObject(bucket, key, expirySeconds)
 }
 
+export async function presignAttachmentDownload(
+  bucket: string,
+  key: string,
+  expirySeconds = 300,
+  filename: string
+) {
+  return getClient().presignedGetObject(
+    bucket,
+    key,
+    expirySeconds,
+    { 'response-content-disposition': `attachment; filename="${filename}"` }
+  )
+}
+
 export async function deleteObject(bucket: string, key: string) {
   return getClient().removeObject(bucket, key)
+}
+
+export async function objectExists(bucket: string, key: string) {
+  try {
+    await getClient().statObject(bucket, key)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function extensionFromMime(mime: string) {

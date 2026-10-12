@@ -6,10 +6,30 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
 enum Role {
   PRODUCER
   ARTIST
+}
+
+enum LicenseType {
+  NON_EXCLUSIVE
+  EXCLUSIVE
+}
+
+enum OfferStatus {
+  PENDING
+  COUNTERED
+  DECLINED
+  AWAITING_PAYMENT
+  PAID
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
 }
 
 model User {
@@ -25,6 +45,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   beats     Beat[]
+  offersMade Offer[] @relation("ArtistOffers")
+  offersReceived Offer[] @relation("ProducerOffers")
+  payments  Payment[]
+  licenses  License[]
 }
 
 model Beat {
@@ -47,8 +71,16 @@ model Beat {
   producerId  String
   producer    User     @relation(fields: [producerId], references: [id], onDelete: Cascade)
   tags        Tag[]
+
+  exclusivePriceCents Int?  @map("exclusivePriceCents")
+  exclusiveSold       Boolean @default(false) @map("exclusiveSold")
+  offers     Offer[]
+  licenses   License[]
+  payments   Payment[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
 
   @@index([producerId])
   @@index([createdAt])
@@ -60,4 +92,64 @@ model Tag {
   slug     String @unique
   useCount Int    @default(0)
   beats    Beat[]
+}
+
+model Offer {
+  id                String      @id @default(cuid())
+  beatId            String
+  beat              Beat        @relation(fields: [beatId], references: [id], onDelete: Cascade)
+  artistId          String
+  artist            User        @relation("ArtistOffers", fields: [artistId], references: [id], onDelete: Cascade)
+  producerId        String
+  producer          User        @relation("ProducerOffers", fields: [producerId], references: [id], onDelete: Cascade)
+  licenseType       LicenseType
+  listingPriceCents Int
+  amountCents       Int
+  counterAmountCents Int?
+  agreedAmountCents Int?
+  message           String?
+  counterMessage    String?
+  status            OfferStatus @default(PENDING)
+  expiresAt         DateTime?
+  payment           Payment?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([producerId, status])
+  @@index([artistId])
+  @@index([status, expiresAt])
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  stripeSessionId       String        @unique
+  stripePaymentIntentId String?
+  amountCents           Int
+  status                PaymentStatus @default(PENDING)
+  beatId                String
+  beat                  Beat          @relation(fields: [beatId], references: [id], onDelete: Cascade)
+  artistId              String
+  artist                User          @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  licenseType           LicenseType
+  offerId               String?       @unique
+  offer                 Offer?        @relation(fields: [offerId], references: [id])
+  license               License?
+  createdAt             DateTime      @default(now())
+}
+
+model License {
+  id              String      @id @default(cuid())
+  beatId          String
+  beat            Beat        @relation(fields: [beatId], references: [id], onDelete: Cascade)
+  artistId        String
+  artist          User        @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  licenseType     LicenseType
+  pricePaidCents  Int
+  paymentId       String?     @unique
+  payment         Payment?    @relation(fields: [paymentId], references: [id])
+  offerId         String?     @unique
+  createdAt       DateTime    @default(now())
+
+  @@unique([beatId, artistId, licenseType])
+  @@index([artistId])
 }

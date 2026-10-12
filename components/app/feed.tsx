@@ -7,6 +7,7 @@ import { formatCount } from '@/components/app/data'
 import { ARTWORK_PRESETS } from '@/components/app/artwork-slot'
 import { Waveform } from '@/components/app/waveform'
 import { computePeaksFromBuffer } from '@/lib/upload-client'
+import { formatMoney } from '@/lib/money'
 
 function presetCss(id: string | null) {
   return (
@@ -69,6 +70,8 @@ export function Feed({
   shareCount,
   onShare,
   onOffer,
+  onBuy,
+  owned,
   onNext,
   isArtist,
   onPoster,
@@ -88,6 +91,8 @@ export function Feed({
   shareCount: number
   onShare: () => void
   onOffer: () => void
+  onBuy: () => void
+  owned: ('NON_EXCLUSIVE' | 'EXCLUSIVE')[]
   onNext: () => void
   isArtist: boolean
   onPoster: (user: { name: string; role: string; avatar: string; bio: string }) => void
@@ -265,7 +270,22 @@ export function Feed({
               ) : (
                 `from $${beat.price}`
               )}
+              {beat.exclusivePriceCents !== null && !beat.exclusiveSold && (
+                <span className="ml-2 rounded-md bg-white/15 px-2 py-1">
+                  Exclusive {formatMoney(beat.exclusivePriceCents)}
+                </span>
+              )}
             </span>
+            {beat.exclusiveSold && (
+              <span className="rounded-md bg-red-500/20 px-2 py-1 font-black text-red-300">
+                EXCLUSIVE: SOLD
+              </span>
+            )}
+            {beat.licenseCount > 0 && (
+              <span className="rounded-md bg-white/15 px-2 py-1 text-white/80">
+                Licensed to {beat.licenseCount} artist{beat.licenseCount === 1 ? '' : 's'}
+              </span>
+            )}
           </div>
 
           <Waveform
@@ -333,12 +353,39 @@ export function Feed({
           </div>
 
           {isArtist && (
-            <button
-              onClick={onOffer}
-              className="mt-1 rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
-            >
-              MAKE OFFER
-            </button>
+            <div className="mt-1 flex flex-col items-center gap-1.5">
+              {beat.exclusiveSold ? (
+                <span className="rounded-full px-3 py-2 text-[10px] font-black text-red-300">
+                  SOLD
+                </span>
+              ) : owned.includes('NON_EXCLUSIVE') ? (
+                <span className="rounded-full bg-lime-300/20 px-3 py-2 text-[10px] font-black text-lime-300">
+                  IN LIBRARY
+                </span>
+              ) : beat.price === 0 ? (
+                <button
+                  onClick={onOffer}
+                  className="rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
+                >
+                  GET FREE
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={onBuy}
+                    className="rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
+                  >
+                    BUY NOW
+                  </button>
+                  <button
+                    onClick={onOffer}
+                    className="rounded-full border border-white/25 px-3 py-2 text-[10px] font-black text-white"
+                  >
+                    MAKE OFFER
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

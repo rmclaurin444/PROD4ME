@@ -11,6 +11,16 @@ import { readAudioDuration, uploadWithProgress, computePeaks } from '@/lib/uploa
 const AUDIO_MAX = 250 * 1024 * 1024
 const ARTWORK_MAX = 20 * 1024 * 1024
 
+export function validateExclusivePrice(value: string, price: number): string {
+  if (value.trim() === '') return ''
+  const exclusive = Number(value)
+  if (!Number.isFinite(exclusive)) return 'Exclusive price must be a number'
+  if (exclusive < 0.5) return 'Exclusive price must be at least $0.50'
+  if (exclusive > 600) return 'Exclusive price must be at most $600'
+  if (exclusive <= price) return 'Exclusive price must be greater than the non-exclusive price'
+  return ''
+}
+
 async function presign(kind: 'audio' | 'artwork', file: File) {
   const res = await fetch('/api/uploads/presign', {
     method: 'POST',
@@ -27,6 +37,7 @@ export function UploadView() {
   const [bpm, setBpm] = useState('')
   const [musicalKey, setMusicalKey] = useState('')
   const [price, setPrice] = useState(35)
+  const [exclusivePrice, setExclusivePrice] = useState('')
   const [tags, setTags] = useState<string[]>([])
 
   const [audioFile, setAudioFile] = useState<File | null>(null)
@@ -71,6 +82,7 @@ export function UploadView() {
     setBpm('')
     setMusicalKey('')
     setPrice(35)
+    setExclusivePrice('')
     setTags([])
     setAudioFile(null)
     setAudioDuration(null)
@@ -91,6 +103,12 @@ export function UploadView() {
     }
     if (!audioFile) {
       setError('Add an audio file')
+      return
+    }
+
+    const exclusiveError = validateExclusivePrice(exclusivePrice, price)
+    if (exclusiveError) {
+      setError(exclusiveError)
       return
     }
 
@@ -119,6 +137,7 @@ export function UploadView() {
           bpm: bpm ? Number(bpm) : null,
           musicalKey: musicalKey.trim() || null,
           price,
+          exclusivePrice: exclusivePrice.trim() === '' ? null : Number(exclusivePrice),
           tags,
           audioKey: audio.key,
           artKey,
@@ -234,7 +253,7 @@ export function UploadView() {
           </div>
 
           <label className="text-xs font-bold text-muted-foreground">
-            Price{' '}
+            Non-exclusive price{' '}
             <span className="ml-2 rounded-full bg-lime-300 px-2 py-1 text-[10px] text-black">
               {price === 0 ? 'FREE' : `$${price}`}
             </span>
@@ -251,6 +270,32 @@ export function UploadView() {
             />
             <span className="mt-1 block text-xs text-muted-foreground">
               {price === 0 ? '$0 — Free' : `$${price}`}
+            </span>
+          </label>
+
+          <label className="text-xs font-bold text-muted-foreground">
+            Exclusive license price{' '}
+            <span className="ml-2 rounded-full bg-white/10 px-2 py-1 text-[10px]">
+              {exclusivePrice.trim() === '' ? 'NOT OFFERED' : `$${Number(exclusivePrice)}`}
+            </span>
+            <input
+              aria-label="Exclusive license price"
+              type="number"
+              min="0.5"
+              max="600"
+              step="0.01"
+              value={exclusivePrice}
+              onChange={e => setExclusivePrice(e.target.value)}
+              className="input mt-2"
+              placeholder="Optional — e.g. 299"
+              inputMode="decimal"
+              disabled={busy}
+            />
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Blank means the exclusive license is not offered. This license sells once, then the beat closes.
+            </span>
+            <span className="mt-1 block min-h-4 text-xs font-semibold text-red-400">
+              {validateExclusivePrice(exclusivePrice, price)}
             </span>
           </label>
 

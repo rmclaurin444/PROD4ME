@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getBeats } from '@/lib/beats'
+import { getArtistLibrary } from '@/lib/licenses'
 import { AppShell } from '@/components/app/app-shell'
 
 export default async function Page() {
@@ -20,6 +21,14 @@ export default async function Page() {
   }
 
   const beats = await getBeats()
+  const library = user.role === 'ARTIST' ? await getArtistLibrary(user.id) : []
+
+  const ownedOffers =
+    user.role === 'PRODUCER'
+      ? await prisma.offer.count({
+          where: { producerId: user.id, status: { in: ['PENDING', 'COUNTERED', 'AWAITING_PAYMENT'] } },
+        })
+      : 0
 
   return (
     <AppShell
@@ -33,6 +42,8 @@ export default async function Page() {
         theme: user.theme,
       }}
       beats={beats}
+      library={library}
+      openOffers={ownedOffers}
     />
   )
 }

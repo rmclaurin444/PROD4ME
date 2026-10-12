@@ -4,6 +4,7 @@ import { BUCKET_ARTWORK, BUCKET_AUDIO, publicUrl, presignDownload } from '@/lib/
 export const beatInclude = {
   producer: { select: { id: true, name: true, avatar: true } },
   tags: { select: { id: true, name: true, slug: true } },
+  _count: { select: { licenses: true } },
 }
 
 export type ShapedBeat = {
@@ -16,6 +17,9 @@ export type ShapedBeat = {
   bpm: number | null
   musicalKey: string | null
   price: number
+  exclusivePriceCents: number | null
+  exclusiveSold: boolean
+  licenseCount: number
   plays: number
   likes: number
   saves: number
@@ -46,6 +50,9 @@ export async function getBeats(take = 50): Promise<ShapedBeat[]> {
       bpm: beat.bpm,
       musicalKey: beat.musicalKey,
       price: beat.price,
+      exclusivePriceCents: beat.exclusivePriceCents,
+      exclusiveSold: beat.exclusiveSold,
+      licenseCount: beat._count.licenses,
       plays: beat.plays,
       likes: beat.likes,
       saves: beat.saves,

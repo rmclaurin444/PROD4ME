@@ -1,8 +1,9 @@
 'use client'
 
-import { Bell, ChevronLeft, MessageCircle, Send } from 'lucide-react'
+import { Bell, ChevronLeft, MessageCircle, Send, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/app/ui'
+import { OffersInbox } from '@/components/app/offers-inbox'
 
 export function InboxView({
   tab,
@@ -16,6 +17,8 @@ export function InboxView({
   message,
   setMessage,
   setMessages,
+  role,
+  refreshKey,
 }: any) {
   const conversation = activeConversation !== null ? messages[activeConversation] : null
 
@@ -102,6 +105,14 @@ export function InboxView({
 
           <div className="mt-8 flex gap-2 rounded-xl bg-white/[.04] p-1">
             <button
+              onClick={() => setTab('offers')}
+              className={`flex-1 rounded-lg px-4 py-3 text-sm font-black ${
+                tab === 'offers' ? 'bg-lime-300 text-black' : 'text-muted-foreground'
+              }`}
+            >
+              <Zap className="mr-2 inline" size={16} /> Offers
+            </button>
+            <button
               onClick={() => setTab('notifications')}
               className={`flex-1 rounded-lg px-4 py-3 text-sm font-black ${
                 tab === 'notifications' ? 'bg-lime-300 text-black' : 'text-muted-foreground'
@@ -120,7 +131,9 @@ export function InboxView({
             </button>
           </div>
 
-          {tab === 'notifications' ? (
+          {tab === 'offers' ? (
+            <OffersInbox key={refreshKey} role={role} isArtist={role === 'ARTIST'} />
+          ) : tab === 'notifications' ? (
             <div className="mt-4 flex flex-col gap-2">
               {notifications.map((n: any, i: number) => (
                 <div

@@ -5,7 +5,6 @@ import { Check, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/app/ui'
 import type { ShapedBeat } from '@/lib/beats'
-
 export function Comments({ beat, comments, draft, setDraft, onPost, onClose }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-5 md:items-center">
@@ -122,46 +121,6 @@ export function PostTrack({
           className="mt-6 w-full bg-lime-300 font-black text-black"
         >
           <Check data-icon="inline-start" /> Publish to profile
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-export function Offer({ beat, onClose }: any) {
-  const [note, setNote] = useState('')
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#151515] p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Purchase options</p>
-            <h2 className="mt-1 text-2xl font-black">{beat.title}</h2>
-          </div>
-          <button onClick={onClose} aria-label="Close">
-            <X />
-          </button>
-        </div>
-
-        <div className="mt-6 flex gap-3">
-          <Button onClick={onClose} className="flex-1 bg-lime-300 font-black text-black">
-            Buy Now · ${beat.price}
-          </Button>
-          <Button onClick={onClose} variant="outline" className="flex-1 border-white/20">
-            Make Offer
-          </Button>
-        </div>
-
-        <input className="input mt-4" placeholder="Your offer in dollars" />
-        <textarea
-          value={note}
-          onChange={e => setNote(e.target.value)}
-          className="input mt-3 min-h-24 resize-y"
-          placeholder="Optional message to the producer"
-        />
-        <Button onClick={onClose} className="mt-3 w-full bg-lime-300 font-black text-black">
-          Send offer with message
         </Button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
   BarChart3,
@@ -18,10 +19,13 @@ import { UploadView } from '@/components/app/upload'
 import { Dashboard } from '@/components/app/dashboard'
 import { ProducerProfile, ArtistProfile } from '@/components/app/profiles'
 import { InboxView, UserProfile } from '@/components/app/inbox'
-import { Comments, PostTrack, Offer } from '@/components/app/modals'
+import { Comments, PostTrack } from '@/components/app/modals'
+import { PurchaseModal, type PurchaseMode } from '@/components/app/purchase-modal'
+import { PriceEditor } from '@/components/app/price-editor'
 import { EditProfile } from '@/components/app/edit-profile'
 import { themes, getInitials } from '@/components/app/data'
 import type { ShapedBeat } from '@/lib/beats'
+import type { ShapedLicense } from '@/lib/offers'
 import type { View } from '@/components/app/nav'
 
 const DEFAULT_BANNER =
@@ -37,8 +41,20 @@ type SessionUser = {
   theme?: string | null
 }
 
-export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat[] }) {
+export function AppShell({
+  user,
+  beats,
+  library,
+  openOffers,
+}: {
+  user: SessionUser
+  beats: ShapedBeat[]
+  library: ShapedLicense[]
+  openOffers: number
+}) {
+  const router = useRouter()
   const isArtist = user.role === 'ARTIST'
+  const isProducer = user.role === 'PRODUCER'
   const avatarText = getInitials(user.name)
 
   const initialTheme = themes.find(t => t.id === user.theme) ?? themes[0]
@@ -57,7 +73,9 @@ export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat
     Object.fromEntries(beats.map(b => [b.id, b.saves]))
   )
   const [tag, setTag] = useState<string | null>(null)
-  const [offer, setOffer] = useState(false)
+  const [purchase, setPurchase] = useState<{ mode: PurchaseMode } | null>(null)
+  const [libraryState, setLibraryState] = useState<ShapedLicense[]>(library)
+  const [editPriceBeat, setEditPriceBeat] = useState<ShapedBeat | null>(null)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [addedComments, setAddedComments] = useState<
@@ -82,7 +100,8 @@ export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat
     { title: string; url: string; beat: string; art: string | null }[]
   >([])
   const [postOpen, setPostOpen] = useState(false)
-  const [inboxTab, setInboxTab] = useState<'notifications' | 'messages'>('notifications')
+  const [inboxTab, setInboxTab] = useState<'offers' | 'notifications' | 'messages'>('offers')
+  const [offersKey, setOffersKey] = useState(0)
   const [unread, setUnread] = useState(3)
   const [activeConversation, setActiveConversation] = useState<number | null>(null)
   const [message, setMessage] = useState('')
@@ -91,6 +110,16 @@ export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat
     { name: 'Nia Saint', avatar: 'NS', preview: 'Would love to hear what you make.', time: '1h', unread: 0, history: [{ text: 'Would love to hear what you make.', sender: 'them', timestamp: '1h' }] },
     { name: 'Juno Grey', avatar: 'JG', preview: 'Offer accepted — sending stems now.', time: '3h', unread: 1, history: [{ text: 'Offer accepted — sending stems now.', sender: 'them', timestamp: '3h' }] },
   ])
+
+  useEffect(() => {
+    // re-sync the library when the server sends refreshed props (post license grant)
+    setLibraryState(library)
+  }, [library])
+
+  useEffect(() => {
+    // remount the offers inbox when it opens so expired offers are re-fetched
+    if (view === 'inbox' && inboxTab === 'offers') setOffersKey(k => k + 1)
+  }, [view, inboxTab])
 
   const notifications = [
     { icon: Bookmark, text: 'Your beat NIGHTSHIFT was saved by Kai Rivers.', time: '2m', fresh: true },
@@ -111,6 +140,22 @@ export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat
   const filtered = tag ? beats.filter(b => b.tags.includes(tag)) : beats
   const beat = filtered.length > 0 ? filtered[index % filtered.length] : null
   const beatId = beat?.id ?? ''
+
+  const ownedForBeat = useMemo(
+    () =>
+      new Set(
+        libraryState
+          .filter(l => l.beat.id === beatId)
+          .map(l => l.licenseType as 'NON_EXCLUSIVE' | 'EXCLUSIVE')
+      ),
+    [libraryState, beatId]
+  )
+
+  const myBeats = useMemo(
+    () => beats.filter(b => b.producerId === user.id),
+    [beats, user.id]
+  )
+
   const toggleSave = () => {
     if (!beatId) return
     const isSaved = saved.includes(beatId)
@@ -213,6 +258,8 @@ export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat
               message={message}
               setMessage={setMessage}
               setMessages={setMessages}
+              role={user.role}
+              refreshKey={offersKey}
             />
           ) : (
             view === 'feed' &&
@@ -232,10 +279,12 @@ export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat
                   onComment={() => setCommentsOpen(true)}
                   shareCount={shareCounts[beatId] ?? 0}
                   onShare={handleShare}
-                  onOffer={() => setOffer(true)}
-                  onNext={() => setIndex(v => v + 1)}
+                  onOffer={() => setPurchase({ mode: 'offer' })}
+                  onBuy={() => setPurchase({ mode: 'buy' })}
                   isArtist={isArtist}
+                  owned={[...ownedForBeat]}
                   onPoster={u => setProfileUser(users.find(x => x.name === u.name) ?? u)}
+                  onNext={() => setIndex(v => v + 1)}
                 />
               ) : (
                 <div className="mx-auto w-full max-w-md flex-1 px-5 pb-28 pt-24 text-center">
@@ -250,13 +299,21 @@ export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat
           )}
 
           {view === 'upload' && <UploadView />}
-          {view === 'dashboard' && <Dashboard userName={user.name} />}
+          {view === 'dashboard' && isProducer && (
+            <Dashboard
+              userName={user.name}
+              beats={myBeats}
+              openOffers={openOffers}
+              onEditPrice={b => setEditPriceBeat(b)}
+            />
+          )}
           {view === 'profile' &&
             (isArtist ? (
               <ArtistProfile
                 tracks={tracks}
                 saved={saved}
                 beats={beats}
+                library={libraryState}
                 onPost={() => setPostOpen(true)}
                 onEdit={() => setEdit(true)}
                 banner={banner}
@@ -273,10 +330,52 @@ export function AppShell({ user, beats }: { user: SessionUser; beats: ShapedBeat
                 bio={bio}
                 userName={user.name}
                 avatarText={avatarText}
+                beats={myBeats}
+                onEditPrice={b => setEditPriceBeat(b)}
               />
             ))}
 
-          {offer && beat && <Offer onClose={() => setOffer(false)} beat={beat} />}
+          {purchase && beat && (
+            <PurchaseModal
+              beat={beat}
+              mode={purchase.mode}
+              owned={[...ownedForBeat]}
+              onClose={() => setPurchase(null)}
+              onObtained={licenseType => {
+                setLibraryState(prev => [
+                  ...prev,
+                  {
+                    id: `local-${beat.id}-${licenseType}`,
+                    licenseType,
+                    pricePaidCents: 0,
+                    createdAt: new Date().toISOString(),
+                    beat: {
+                      id: beat.id,
+                      title: beat.title,
+                      price: beat.price,
+                      exclusivePriceCents: beat.exclusivePriceCents,
+                      exclusiveSold: beat.exclusiveSold,
+                      producer: beat.producer,
+                      artUrl: beat.artUrl,
+                      artPreset: beat.artPreset,
+                    },
+                  },
+                ])
+                router.refresh()
+              }}
+            />
+          )}
+
+          {editPriceBeat && (
+            <PriceEditor
+              beat={editPriceBeat}
+              onClose={() => setEditPriceBeat(null)}
+              onSaved={() => {
+                setEditPriceBeat(null)
+                router.refresh()
+              }}
+            />
+          )}
 
           {commentsOpen && beat && (
             <Comments

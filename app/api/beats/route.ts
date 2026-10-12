@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { beatInclude, getBeats } from '@/lib/beats'
+import { dollarsToCents } from '@/lib/offers'
+import { MAX_PRICE_DOLLARS } from '@/lib/money'
 
 function slugify(value: string) {
   return value
@@ -45,6 +47,7 @@ export async function POST(request: Request) {
     bpm?: number | null
     musicalKey?: string | null
     price?: number
+    exclusivePrice?: number | null
     tags?: string[]
     audioKey?: string
     artKey?: string | null
@@ -69,8 +72,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Audio file is required' }, { status: 400 })
   }
 
-  if (typeof price !== 'number' || price < 0 || price > 600) {
-    return NextResponse.json({ error: 'Price must be between 0 and 600' }, { status: 400 })
+  if (typeof price !== 'number' || price < 0 || price > MAX_PRICE_DOLLARS) {
+    return NextResponse.json({ error: `Price must be between 0 and ${MAX_PRICE_DOLLARS}` }, { status: 400 })
+  }
+  if (price > 0 && price < 0.5) {
+    return NextResponse.json({ error: 'Price must be $0 (free) or at least $0.50' }, { status: 400 })
+  }
+
+  let exclusivePriceCents: number | null = null
+  if (body.exclusivePrice !== null && body.exclusivePrice !== undefined) {
+    const exclusive = Number(body.exclusivePrice)
+    if (!Number.isFinite(exclusive) || exclusive < 0.5) {
+      return NextResponse.json({ error: 'Exclusive price must be at least $0.50' }, { status: 400 })
+    }
+    if (exclusive > MAX_PRICE_DOLLARS) {
+      return NextResponse.json({ error: `Exclusive price must be at most $${MAX_PRICE_DOLLARS}` }, { status: 400 })
+    }
+    if (exclusive <= price) {
+      return NextResponse.json(
+        { error: 'Exclusive price must be greater than the non-exclusive price' },
+        { status: 400 }
+      )
+    }
+    exclusivePriceCents = dollarsToCents(exclusive)
   }
 
   const cleanTags = Array.from(
@@ -88,6 +112,7 @@ export async function POST(request: Request) {
         bpm: typeof bpm === 'number' ? bpm : null,
         musicalKey: musicalKey?.trim() || null,
         price,
+        exclusivePriceCents,
         audioKey,
         artKey: artKey ?? null,
         artUrl: null,

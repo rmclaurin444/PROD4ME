@@ -1,8 +1,0 @@
-Checking for new versions...
-
-2026-10-12 17:49:05   --> checkout.session.completed [evt_1UPqneDHQ9ERcnuW1qQsg3hS]
-2026-10-12 17:49:07  <--  [200] POST http://localhost:3000/api/webhooks/stripe [evt_1UPqneDHQ9ERcnuW1qQsg3hS]
-2026-10-12 17:58:11   --> checkout.session.expired [evt_1UPrEVDHQ9ERcnuWukohqwq4]
-2026-10-12 17:58:12  <--  [200] POST http://localhost:3000/api/webhooks/stripe [evt_1UPrEVDHQ9ERcnuWukohqwq4]
-2026-10-12 17:59:28   --> checkout.session.completed [evt_1UPrFkDHQ9ERcnuWRsmphKMr]
-2026-10-12 17:59:28  <--  [200] POST http://localhost:3000/api/webhooks/stripe [evt_1UPrFkDHQ9ERcnuWRsmphKMr]

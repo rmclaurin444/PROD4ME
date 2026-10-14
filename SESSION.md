@@ -349,3 +349,26 @@ When resuming:
 - There was **no beat edit form** in Sprint 1 — Sprint 2 added price editing via the Dashboard and Producer Profile (`PriceEditor` → `PATCH /api/beats/[id]`), including the exclusive field, disabled after exclusive sale.
 - Producer can decline only PENDING offers; artist can decline only their COUNTERED offer. Artist cannot counter (producers move first).
 - Seeded data patched: `NIGHTSHIFT` exclusive $499; `LATE CHECKOUT` price 0 (FREE). `pnpm seed` backfills for fresh databases.
+
+---
+
+## Download feature (2026-10-14)
+
+- `GET /api/licenses/[id]/download` — artist-only (auth'd, license ownership enforced server-side), `objectExists` check, 5-min attachment presigned URL (`presignAttachmentDownload` in `lib/storage.ts`), filename = beat title. Download button on ArtistProfile library cards.
+- AppShell library state now re-syncs on refreshed server props (`useEffect([library])`) so fresh licenses are downloadable without a reload.
+
+## Forgot password (2026-10-14)
+
+- Migration `20261014000910_add_password_reset_fields`: `User.resetTokenHash`, `User.resetTokenExpiresAt`.
+- `lib/reset-token.ts`: SHA-256 hashed tokens (raw token = 64 hex chars, 1h TTL, single-use, cleared after use).
+- `POST /api/auth/forgot-password` (generic 200 — no account enumeration, in-memory rate limit 5/15min, logs link to console + returns `devLink` in dev since no SMTP is wired), `POST /api/auth/reset-password` (bcrypt 10, parity with register).
+- Pages: `(auth)/forgot/page.tsx` (shows the devLink box in dev), `(auth)/reset/page.tsx` + `reset-form.tsx` (confirm field, inline errors), "Forgot password?" link on the login page. `lib/auth.config.ts` whitelist extended to `/forgot` + `/reset`.
+- **Restart pitfall:** new route files 404'd until the dev server restarted (Turbopack dev did not hot-register `/api/auth/forgot-password`; even `/api/auth/session` 404'd until restart). Adding routes while dev is running = restart dev.
+- Password recovery performed: `rmclaurin@ggc.edu` reset to `password123` through the running app (E2E verified: devLink → reset ok → token replay rejected 400 → bcrypt compare true).
+
+## Webhook reliability work (2026-10-14)
+
+- **Root cause of the "$9 not confirmed" payment:** a zombie `stripe listen` from a dead console (PID 7808) was the only subscriber and stopped forwarding; a second redirected listener had died silently. Slow-filesystem warnings are unrelated (server answered webhooks 200 all along).
+- **Self-healing poll:** `GET /api/checkout?session_id=` now, when the payment is still PENDING, does `stripe.checkout.sessions.retrieve()` and if Stripe says `paid` runs `finalizeCheckoutSession()` directly — success page grants the license even if the listener is dead (`selfHealed: true` in the response). Reuses the webhook's exact finalize path.
+- **Listener ownership:** Claude keeps `stripe listen` running as a background task on THIS machine, redirected to `listener.log` / `listener.err.log` (`L:\` note: started via `Start-Process cmd '/c stripe listen --events checkout.session.completed,checkout.session.expired --forward-to localhost:3000/api/webhooks/stripe ^> listener.log 2^> listener.err.log'`). On OTHER machines the user runs it themselves. Watch with `Get-Content listener.log -Tail 20 -Wait`. If it dies, restart it, then re-deliver missed events with `stripe events resend <evt_id>` (find ids via `stripe events list`).
+- Note: this Stripe CLI/sandbox prints the SAME `whsec_...` (whsec_e1cb…) on every `stripe listen` restart — per-account fixed secret, so .env.local needs no update between listener restarts.

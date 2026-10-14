@@ -35,7 +35,10 @@ export const authConfig = {
       }
 
       const isAuthRoute =
-        pathname.startsWith('/login') || pathname.startsWith('/signup')
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/signup') ||
+        pathname.startsWith('/forgot') ||
+        pathname.startsWith('/reset')
 
       if (isAuthRoute) {
         if (isLoggedIn) {

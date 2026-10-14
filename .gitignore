@@ -17,3 +17,5 @@ node_modules
 tsconfig.tsbuildinfo
 dev.log
 dev.err.log
+listener.err.log
+listener.log

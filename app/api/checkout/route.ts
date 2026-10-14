@@ -4,6 +4,7 @@ import type Stripe from 'stripe'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getStripe, stripeConfigError } from '@/lib/stripe'
+import { finalizeCheckoutSession } from '@/lib/finalize'
 import {
   expireStaleOffers,
 } from '@/lib/offers'
@@ -29,6 +30,28 @@ export async function GET(request: Request) {
   if (!payment || payment.artistId !== session.user.id) {
     return NextResponse.json({ status: null })
   }
+
+  // self-healing poll: if the webhook never arrived (e.g. `stripe listen` died),
+  // ask Stripe directly and finalize the same way the webhook would
+  if (payment.status === 'PENDING') {
+    const stripe = getStripe()
+    if (stripe) {
+      try {
+        const live = await stripe.checkout.sessions.retrieve(sessionId)
+        if (live.payment_status === 'paid') {
+          await finalizeCheckoutSession(live)
+          const fresh = await prisma.payment.findUnique({
+            where: { id: payment.id },
+            select: { status: true },
+          })
+          return NextResponse.json({ status: fresh?.status ?? payment.status, selfHealed: true })
+        }
+      } catch (error) {
+        console.warn('Checkout status self-heal skipped:', error)
+      }
+    }
+  }
+
   return NextResponse.json({ status: payment.status })
 }
 

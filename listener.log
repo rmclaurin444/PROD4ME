@@ -1,4 +1,0 @@
-Checking for new versions...
-
-2026-10-13 20:56:05   --> checkout.session.completed [evt_1UQGKmDHQ9ERcnuWzFx1e10t]
-2026-10-13 20:56:05  <--  [200] POST http://localhost:3000/api/webhooks/stripe [evt_1UQGKmDHQ9ERcnuWzFx1e10t]

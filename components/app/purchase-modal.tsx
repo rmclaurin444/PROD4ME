@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { dollarsToCents, formatMoney, MIN_PURCHASE_CENTS } from '@/lib/money'
+import { trackEvent } from '@/lib/recommendations/track'
 import type { ShapedBeat } from '@/lib/beats'
 
 export type PurchaseMode = 'buy' | 'offer'
@@ -93,6 +94,7 @@ export function PurchaseModal({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Could not claim license')
+      // engagement: BUY is recorded server-side at the grant itself now
       setInfo('Added to your library.')
       onObtained('NON_EXCLUSIVE')
     } catch (err) {
@@ -119,6 +121,7 @@ export function PurchaseModal({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Could not send offer')
+      trackEvent(beat.id, 'OFFER')
       setInfo('Offer sent — the producer has 48h to respond.')
       setMessage('')
       setAmount('')

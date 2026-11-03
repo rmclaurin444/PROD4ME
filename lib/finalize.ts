@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe'
 import { WAITING_OFFER_STATUSES } from '@/lib/offers'
+import { recordEngagementEvent } from '@/lib/recommendations/record.ts'
 
 export class UnpurchaseableError extends Error {}
 
@@ -35,6 +36,7 @@ export async function finalizeCheckoutSession(session: CheckoutSessionLike) {
   const intentId = paymentIntentId(session.payment_intent)
 
   try {
+    let granted = false
     await prisma.$transaction(async tx => {
       const beat = await tx.beat.findUnique({ where: { id: payment.beatId } })
       if (!beat) throw new UnpurchaseableError('Beat no longer exists')
@@ -58,6 +60,7 @@ export async function finalizeCheckoutSession(session: CheckoutSessionLike) {
             offerId: payment.offerId,
           },
         })
+        granted = true
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
           // artist already owns this license (paid twice for the same type)
@@ -85,6 +88,14 @@ export async function finalizeCheckoutSession(session: CheckoutSessionLike) {
         })
       }
     })
+
+    // engagement: library addition, recorded server-side so it also covers
+    // grants delivered through the webhook while the artist is away.
+    if (granted) {
+      void recordEngagementEvent(payment.artistId, payment.beatId, 'BUY').catch(err =>
+        console.warn('BUY event record failed', err)
+      )
+    }
     return { handled: true }
   } catch (error) {
     if (error instanceof UnpurchaseableError) {

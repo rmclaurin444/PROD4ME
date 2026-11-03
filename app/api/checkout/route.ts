@@ -44,7 +44,7 @@ export async function GET(request: Request) {
             where: { id: payment.id },
             select: { status: true },
           })
-          return NextResponse.json({ status: fresh?.status ?? payment.status, selfHealed: true })
+          return NextResponse.json({ status: fresh?.status ?? payment.status, selfHealed: true, beatId: payment.beatId })
         }
       } catch (error) {
         console.warn('Checkout status self-heal skipped:', error)
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ status: payment.status })
+  return NextResponse.json({ status: payment.status, beatId: payment.beatId })
 }
 
 export async function POST(request: Request) {

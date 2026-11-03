@@ -20,6 +20,7 @@ export function CheckoutSuccessView({ sessionId }: { sessionId: string }) {
           const data = await res.json()
           if (data.status === 'SUCCEEDED') {
             if (!cancelled) setStatus('succeeded')
+            // engagement: BUY is recorded server-side in finalizeCheckoutSession
             return
           }
           if (data.status === 'FAILED') {

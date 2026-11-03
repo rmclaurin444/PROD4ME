@@ -8,16 +8,22 @@ export function TagInput({
   onChange,
   max = 8,
   placeholder = 'Add tags with Enter or comma',
+  suggestType,
 }: {
   value: string[]
   onChange: (tags: string[]) => void
   max?: number
   placeholder?: string
+  suggestType?: 'genre'
 }) {
   const [draft, setDraft] = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
+  // Enter commits the typed draft; suggestions only get adopted when the user
+  // explicitly navigates to one with the arrow keys (or clicks it). This keeps
+  // tagging open-ended instead of forcing previously used tags on Enter.
+  const [browsingSuggestions, setBrowsingSuggestions] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -29,13 +35,16 @@ export function TagInput({
 
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/tags?q=${encodeURIComponent(q)}`)
+        const res = await fetch(
+          `/api/tags?q=${encodeURIComponent(q)}${suggestType ? `&type=${suggestType}` : ''}`,
+        )
         if (res.ok) {
           const data = await res.json()
           const names: string[] = (data.tags ?? [])
             .map((t: any) => t.name as string)
             .filter((n: string) => !value.includes(n))
           setSuggestions(names)
+          setBrowsingSuggestions(false)
           setHighlight(0)
           setOpen(names.length > 0)
         }
@@ -64,6 +73,7 @@ export function TagInput({
     setDraft('')
     setSuggestions([])
     setOpen(false)
+    setBrowsingSuggestions(false)
   }
 
   const removeTag = (tag: string) => {
@@ -73,7 +83,7 @@ export function TagInput({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault()
-      if (open && suggestions[highlight]) {
+      if (browsingSuggestions && suggestions[highlight]) {
         addTag(suggestions[highlight])
       } else {
         addTag(draft)
@@ -86,14 +96,16 @@ export function TagInput({
       return
     }
 
-    if (e.key === 'ArrowDown' && open) {
+    if (e.key === 'ArrowDown' && open && suggestions.length > 0) {
       e.preventDefault()
+      setBrowsingSuggestions(true)
       setHighlight(h => Math.min(h + 1, suggestions.length - 1))
       return
     }
 
-    if (e.key === 'ArrowUp' && open) {
+    if (e.key === 'ArrowUp' && open && suggestions.length > 0) {
       e.preventDefault()
+      setBrowsingSuggestions(true)
       setHighlight(h => Math.max(h - 1, 0))
       return
     }

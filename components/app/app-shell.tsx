@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
@@ -27,6 +27,8 @@ import { themes, getInitials } from '@/components/app/data'
 import type { ShapedBeat } from '@/lib/beats'
 import type { ShapedLicense } from '@/lib/offers'
 import type { View } from '@/components/app/nav'
+import { trackEvent } from '@/lib/recommendations/track'
+import { SKIP_UNDER_MILLIS } from '@/lib/recommendations/constants'
 
 const DEFAULT_BANNER =
   'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1400&q=80'
@@ -46,11 +48,13 @@ export function AppShell({
   beats,
   library,
   openOffers,
+  producers,
 }: {
   user: SessionUser
   beats: ShapedBeat[]
   library: ShapedLicense[]
   openOffers: number
+  producers: { id: string; name: string; avatar: string | null; bio: string | null }[]
 }) {
   const router = useRouter()
   const isArtist = user.role === 'ARTIST'
@@ -61,6 +65,13 @@ export function AppShell({
 
   const [view, setView] = useState<View>('feed')
   const [index, setIndex] = useState(0)
+  // feed data now streams from GET /api/feed (personalized + explore +
+  // cursor pagination). `beats` (server props) still serve profile/dashboard.
+  const [feedBeats, setFeedBeats] = useState<ShapedBeat[]>([])
+  const [feedCursor, setFeedCursor] = useState<string | null>(null)
+  const [feedTag, setFeedTag] = useState<string | null>(null)
+  const [feedLoading, setFeedLoading] = useState(false)
+  const feedLoadingRef = useRef(false)
   const [saved, setSaved] = useState<string[]>([])
   const [liked, setLiked] = useState<string[]>([])
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>(
@@ -121,6 +132,60 @@ export function AppShell({
     if (view === 'inbox' && inboxTab === 'offers') setOffersKey(k => k + 1)
   }, [view, inboxTab])
 
+  // ---- personalized feed loading (server: lib/recommendations/*) -----------
+  const loadFeed = async (
+    tag: string | null,
+    mode: 'replace' | 'append',
+    cursor: string | null = null,
+  ) => {
+    if (feedLoadingRef.current) return
+    feedLoadingRef.current = true
+    setFeedLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (tag) params.set('tag', tag)
+      if (cursor) params.set('cursor', cursor)
+      const res = await fetch(`/api/feed${params.size > 0 ? `?${params.toString()}` : ''}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Feed failed')
+      const page: ShapedBeat[] = data.beats ?? []
+      const nextCursor: string | null = data.nextCursor ?? null
+
+      if (mode === 'replace') {
+        setFeedBeats(page)
+        setIndex(0)
+      } else {
+        // append, deduping against anything already on the client
+        setFeedBeats(current => {
+          const known = new Set(current.map(beat => beat.id))
+          const fresh = page.filter(beat => !known.has(beat.id))
+          return [...current, ...fresh]
+        })
+      }
+      setFeedCursor(nextCursor)
+    } catch {
+      // keep the current feed on failure
+    } finally {
+      feedLoadingRef.current = false
+      setFeedLoading(false)
+    }
+  }
+
+  /** A feed must never render blank: if the API failed or handed back an
+   *  empty page, hydrate from the server-rendered breadth prop instead. */
+  const ensureFeedNeverBlank = () => setFeedBeats(current => (current.length === 0 ? beats : current))
+
+  useEffect(() => {
+    void loadFeed(feedTag, 'replace').finally(ensureFeedNeverBlank)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedTag])
+
+  const handleFeedTagTap = (tagName: string) => {
+    setFeedTag(tagName === feedTag ? null : tagName)
+  }
+
+  const clearFeedTag = () => setFeedTag(null)
+
   const notifications = [
     { icon: Bookmark, text: 'Your beat NIGHTSHIFT was saved by Kai Rivers.', time: '2m', fresh: true },
     { icon: UserRound, text: 'Nia Saint started following you.', time: '18m', fresh: true },
@@ -129,16 +194,16 @@ export function AppShell({
     { icon: Link2, text: 'Avery Lane posted a track made with your beat.', time: 'Yesterday', fresh: false },
   ]
 
-  const users = [
-    { name: 'Melo K', role: 'Producer', avatar: 'MK', bio: 'Dark drums and cinematic textures.' },
-    { name: 'Nia Saint', role: 'Producer', avatar: 'NS', bio: 'Melodic worlds for late nights.' },
-    { name: 'Juno Grey', role: 'Producer', avatar: 'JG', bio: 'Dusty loops and warm samples.' },
-    { name: 'Trey Two', role: 'Producer', avatar: 'TT', bio: '808s with a point of view.' },
-  ]
+  const users = producers.map(p => ({
+    id: p.id,
+    name: p.name,
+    role: 'Producer',
+    avatar: p.avatar ?? getInitials(p.name),
+    bio: p.bio ?? '',
+  }))
 
   const matches = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
-  const filtered = tag ? beats.filter(b => b.tags.includes(tag)) : beats
-  const beat = filtered.length > 0 ? filtered[index % filtered.length] : null
+  const beat = feedBeats.length > 0 ? feedBeats[index % feedBeats.length] : null
   const beatId = beat?.id ?? ''
 
   const ownedForBeat = useMemo(
@@ -161,6 +226,8 @@ export function AppShell({
     const isSaved = saved.includes(beatId)
     setSaved(v => (isSaved ? v.filter(i => i !== beatId) : [...v, beatId]))
     setSaveCounts(c => ({ ...c, [beatId]: (c[beatId] ?? 0) + (isSaved ? -1 : 1) }))
+    // engagement: track only the positive action (saving), not un-saving
+    if (!isSaved) trackEvent(beatId, 'SAVE')
   }
 
   const toggleLike = () => {
@@ -168,6 +235,8 @@ export function AppShell({
     const isLiked = liked.includes(beatId)
     setLiked(v => (isLiked ? v.filter(i => i !== beatId) : [...v, beatId]))
     setLikeCounts(c => ({ ...c, [beatId]: (c[beatId] ?? 0) + (isLiked ? -1 : 1) }))
+    // engagement: track only the positive action (liking), not un-liking
+    if (!isLiked) trackEvent(beatId, 'LIKE')
   }
 
   const handleShare = () => {
@@ -183,6 +252,31 @@ export function AppShell({
   const commentCount = (beat?.comments ?? 0) + (addedComments[beatId]?.length ?? 0)
 
   const roleLabel = isArtist ? 'Artist' : 'Producer'
+
+  // Engagement: SKIP detection — when the visible beat changes (or the user
+  // leaves the feed entirely) and the outgoing beat was seen for less than
+  // SKIP_UNDER_MILLIS, log one SKIP for that beat view. At most one SKIP per
+  // beat view, and only when actually viewing the feed (not a profile, etc).
+  const viewStartedRef = useRef<{ beatId: string; at: number } | null>(null)
+
+  useEffect(() => {
+    const watchingFeed = view === 'feed' && !profileUser && beatId.length > 0
+    const started = viewStartedRef.current
+
+    if (watchingFeed) {
+      if (!started || started.beatId !== beatId) {
+        if (started) {
+          const elapsed = Date.now() - started.at
+          if (elapsed < SKIP_UNDER_MILLIS) trackEvent(started.beatId, 'SKIP')
+        }
+        viewStartedRef.current = { beatId, at: Date.now() }
+      }
+    } else if (started) {
+      const elapsed = Date.now() - started.at
+      if (elapsed < SKIP_UNDER_MILLIS) trackEvent(started.beatId, 'SKIP')
+      viewStartedRef.current = null
+    }
+  }, [beatId, view, profileUser])
 
   return (
     <main
@@ -223,6 +317,11 @@ export function AppShell({
               user={profileUser}
               count={counts[profileUser.name] ?? 0}
               following={followed.includes(profileUser.name)}
+              beats={
+                profileUser.id
+                  ? beats.filter(b => b.producerId === profileUser.id)
+                  : []
+              }
               onFollow={() => {
                 const isFollowing = followed.includes(profileUser.name)
                 setFollowed(isFollowing ? followed.filter(n => n !== profileUser.name) : [...followed, profileUser.name])
@@ -266,9 +365,9 @@ export function AppShell({
               (beat ? (
                 <Feed
                   beat={beat}
-                  tag={tag}
-                  onTag={setTag}
-                  onClear={() => setTag(null)}
+                  tag={feedTag}
+                  onTag={handleFeedTagTap}
+                  onClear={clearFeedTag}
                   saved={saved.includes(beatId)}
                   onSave={toggleSave}
                   saveCount={saveCounts[beatId] ?? 0}
@@ -283,9 +382,38 @@ export function AppShell({
                   onBuy={() => setPurchase({ mode: 'buy' })}
                   isArtist={isArtist}
                   owned={[...ownedForBeat]}
-                  onPoster={u => setProfileUser(users.find(x => x.name === u.name) ?? u)}
-                  onNext={() => setIndex(v => v + 1)}
+                  onPoster={posterUser => {
+                    // resolve the real producer row so the profile shows true
+                    // bio/avatar/ID — fall back to whatever the feed sent
+                    const real = producers.find(p => p.id === posterUser.producerId)
+                    setProfileUser(
+                      real
+                        ? {
+                            id: real.id,
+                            name: real.name,
+                            role: 'Producer',
+                            avatar: real.avatar ?? getInitials(real.name),
+                            bio: real.bio ?? '',
+                          }
+                        : posterUser
+                    )
+                  }}
+                  onNext={() => {
+                    const next = index + 1
+                    // prefetch the next page when crossing into the last beat
+                    if (next >= feedBeats.length - 1 && feedCursor && !feedLoading) {
+                      void loadFeed(feedTag, 'append', feedCursor)
+                    }
+                    setIndex(next)
+                  }}
                 />
+              ) : feedLoading ? (
+                <div className="mx-auto w-full max-w-md flex-1 px-5 pb-28 pt-24 text-center">
+                  <h2 className="text-2xl font-black">Loading your feed…</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Personalizing your Discover page.
+                  </p>
+                </div>
               ) : (
                 <div className="mx-auto w-full max-w-md flex-1 px-5 pb-28 pt-24 text-center">
                   <h2 className="text-2xl font-black">No beats yet</h2>
@@ -385,6 +513,7 @@ export function AppShell({
               setDraft={setCommentDraft}
               onPost={() => {
                 if (commentDraft.trim()) {
+                  trackEvent(beatId, 'COMMENT')
                   setAddedComments(prev => ({
                     ...prev,
                     [beatId]: [

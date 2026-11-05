@@ -1,6 +1,6 @@
 'use client'
 
-import { Zap } from 'lucide-react'
+import { Zap, FlaskConical } from 'lucide-react'
 import { getNav, type View } from '@/components/app/nav'
 
 export function Sidebar({
@@ -10,6 +10,7 @@ export function Sidebar({
   userName,
   userRole,
   onSignOut,
+  devPanel,
 }: {
   view: View
   setView: (v: View) => void
@@ -17,6 +18,8 @@ export function Sidebar({
   userName: string
   userRole: string
   onSignOut: () => void
+  /** Dev-only: renders a link to the /dev panel (never in production). */
+  devPanel?: boolean
 }) {
   const nav = getNav(isArtist)
 
@@ -46,6 +49,15 @@ export function Sidebar({
             {label}
           </button>
         ))}
+        {devPanel && (
+          <a
+            href="/dev"
+            className="mt-2 flex items-center gap-3 rounded-xl px-4 py-2 text-xs font-semibold text-muted-foreground/60 hover:bg-white/5 hover:text-lime-300"
+          >
+            <FlaskConical size={14} />
+            Dev panel
+          </a>
+        )}
       </nav>
 
       <div className="mt-auto rounded-2xl border border-white/10 bg-white/[.03] p-4">

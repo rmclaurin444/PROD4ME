@@ -41,9 +41,10 @@ export const authConfig = {
         pathname.startsWith('/reset')
 
       if (isAuthRoute) {
-        if (isLoggedIn) {
-          return Response.redirect(new URL('/', request.nextUrl))
-        }
+        // No bounce for logged-in users: if the cookie references a deleted
+        // user, redirecting /login → / would loop forever (page sees no user
+        // row → /login → cookie still present → / …). Rendering the form is
+        // always safe; a fresh sign-in overwrites the stale cookie.
         return true
       }
 

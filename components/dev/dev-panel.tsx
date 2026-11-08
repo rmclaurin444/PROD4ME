@@ -1,9 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   CircleDashed,
   Database,
@@ -237,18 +239,27 @@ export function DevPanel() {
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-3xl px-6 py-10">
         {/* header */}
-        <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-lg bg-lime-300 text-black">
-            <FlaskConical size={18} />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="grid size-9 place-items-center rounded-lg bg-lime-300 text-black">
+              <FlaskConical size={18} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tighter">
+                DEV <span className="text-lime-300">PANEL</span>
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Test-data tooling — disabled in production builds.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-black tracking-tighter">
-              DEV <span className="text-lime-300">PANEL</span>
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Test-data tooling — disabled in production builds.
-            </p>
-          </div>
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-bold text-muted-foreground transition hover:bg-white/10 hover:text-white"
+          >
+            <ArrowLeft size={13} />
+            Back to app
+          </Link>
         </div>
 
         {/* stats strip */}

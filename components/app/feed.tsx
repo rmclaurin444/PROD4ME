@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Bookmark, Heart, MessageCircle, Share2, Volume2, VolumeX, X } from 'lucide-react'
 import { Avatar, TagPills } from '@/components/app/ui'
 import { formatCount } from '@/components/app/data'
@@ -122,9 +123,21 @@ export function Feed({
 
     const a = audioRef.current
     if (a) {
-      a.muted = true
+      // Try sound-on autoplay first; browsers block unmuted autoplay until
+      // the user has interacted with the page, so fall back to the muted
+      // TikTok-style autoplay when rejected.
+      a.muted = false
       a.currentTime = 0
-      a.play().catch(() => {})
+      a
+        .play()
+        .then(() => {
+          if (!cancelled) setSoundOn(true)
+        })
+        .catch(() => {
+          a.muted = true
+          a.play().catch(() => {})
+          if (!cancelled) setSoundOn(false)
+        })
     }
 
     let cancelled = false
@@ -387,16 +400,32 @@ export function Feed({
                   SOLD
                 </span>
               ) : owned.includes('NON_EXCLUSIVE') ? (
-                <span className="rounded-full bg-lime-300/20 px-3 py-2 text-[10px] font-black text-lime-300">
-                  IN LIBRARY
-                </span>
+                <>
+                  <span className="rounded-full bg-lime-300/20 px-3 py-2 text-[10px] font-black text-lime-300">
+                    IN LIBRARY
+                  </span>
+                  <Link
+                    href={`/studio?beat=${beat.id}`}
+                    className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
+                  >
+                    OPEN IN STUDIO
+                  </Link>
+                </>
               ) : beat.price === 0 ? (
-                <button
-                  onClick={onOffer}
-                  className="rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
-                >
-                  GET FREE
-                </button>
+                <>
+                  <button
+                    onClick={onOffer}
+                    className="rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
+                  >
+                    GET FREE
+                  </button>
+                  <Link
+                    href={`/studio?beat=${beat.id}`}
+                    className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
+                  >
+                    OPEN IN STUDIO
+                  </Link>
+                </>
               ) : (
                 <>
                   <button
@@ -411,6 +440,12 @@ export function Feed({
                   >
                     MAKE OFFER
                   </button>
+                  <Link
+                    href={`/studio?beat=${beat.id}`}
+                    className="rounded-full border border-white/25 px-3 py-2 text-[10px] font-black text-white/80 hover:bg-white/10"
+                  >
+                    TRY IN STUDIO
+                  </Link>
                 </>
               )}
             </div>

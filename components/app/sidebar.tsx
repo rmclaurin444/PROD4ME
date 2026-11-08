@@ -1,6 +1,7 @@
 'use client'
 
-import { Zap, FlaskConical } from 'lucide-react'
+import Link from 'next/link'
+import { Zap, FlaskConical, AudioLines } from 'lucide-react'
 import { getNav, type View } from '@/components/app/nav'
 
 export function Sidebar({
@@ -49,6 +50,17 @@ export function Sidebar({
             {label}
           </button>
         ))}
+        {/* Studio lives on its own protected route (/studio, Artist-only),
+            so it renders a routed link instead of an in-shell view toggle. */}
+        {isArtist && (
+          <Link
+            href="/studio"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground hover:bg-white/5"
+          >
+            <AudioLines size={19} />
+            Studio
+          </Link>
+        )}
         {devPanel && (
           <a
             href="/dev"
@@ -99,6 +111,12 @@ export function MobileNav({
           <span>{label}</span>
         </button>
       ))}
+      {isArtist && (
+        <Link href="/studio" className="flex flex-col items-center gap-1 text-[10px] font-bold">
+          <AudioLines size={19} />
+          <span>Studio</span>
+        </Link>
+      )}
     </div>
   )
 }

@@ -182,7 +182,7 @@ export function InboxView({
   )
 }
 
-export function UserProfile({ user, count, following, onFollow, onMessage, onBack }: any) {
+export function UserProfile({ user, count, following, onFollow, onMessage, onBack, beats }: any) {
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-5 pb-28 pt-24 md:px-12">
       <button onClick={onBack} className="mb-8 flex items-center gap-2 text-sm font-bold text-muted-foreground">
@@ -210,12 +210,45 @@ export function UserProfile({ user, count, following, onFollow, onMessage, onBac
         </Button>
       </div>
 
-      <div className="mt-10 rounded-2xl border border-white/10 bg-white/[.03] p-5">
-        <p className="font-black">Recent activity</p>
+      <h2 className="mt-10 text-xl font-black">
+        Beats · {(beats ?? []).length}
+      </h2>
+      {(beats ?? []).length > 0 ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {beats.map((beat: any) => (
+            <div
+              key={beat.id}
+              className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-3"
+            >
+              {beat.artUrl ? (
+                <img src={beat.artUrl} alt="" className="size-14 rounded-xl object-cover" />
+              ) : (
+                <div className="size-14 shrink-0 rounded-xl bg-gradient-to-br from-lime-300/40 to-emerald-500/30" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-black">{beat.title}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {beat.tags.length > 0
+                    ? beat.tags.map((tag: any) => `#${tag.replace(/\s+/g, '')}`).join(' ')
+                    : 'no tags'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {beat.price === 0 ? (
+                    <span className="rounded-full bg-lime-300 px-2 py-0.5 font-black text-black">FREE</span>
+                  ) : (
+                    `from $${beat.price}`
+                  )}{' '}
+                  · {beat.plays} plays
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
         <p className="mt-2 text-sm text-muted-foreground">
-          Explore {user.name}&apos;s latest beats and posts through the For You feed.
+          {user.name} hasn&apos;t uploaded any beats yet.
         </p>
-      </div>
+      )}
     </div>
   )
 }

@@ -32,6 +32,24 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum TagType {
+  GENRE
+  STYLE
+}
+
+enum EngagementEventType {
+  PLAY_50
+  PLAY_COMPLETE
+  TAG_TAP
+  LIKE
+  SAVE
+  FOLLOW_PRODUCER
+  OFFER
+  BUY
+  COMMENT
+  SKIP
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -44,6 +62,11 @@ model User {
   theme     String?  @default("acid")
   resetTokenHash     String?
   resetTokenExpiresAt DateTime?
+
+  interests  Tag[] @relation("UserInterests")
+  events     EngagementEvent[]
+
+  tasteVector Unsupported("vector(256)")?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -80,6 +103,9 @@ model Beat {
   offers     Offer[]
   licenses   License[]
   payments   Payment[]
+  events     EngagementEvent[]
+
+  tagVector  Unsupported("vector(256)")?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -90,11 +116,28 @@ model Beat {
 }
 
 model Tag {
-  id       String @id @default(cuid())
-  name     String @unique
-  slug     String @unique
-  useCount Int    @default(0)
-  beats    Beat[]
+  id            String  @id @default(cuid())
+  name          String  @unique
+  slug          String  @unique
+  type          TagType @default(GENRE)
+  useCount      Int     @default(0)
+  interestCount Int     @default(0)
+  vectorIndex   Int?    @unique
+  beats         Beat[]
+  interestedUsers User[] @relation("UserInterests")
+}
+
+model EngagementEvent {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  beatId    String
+  beat      Beat                @relation(fields: [beatId], references: [id], onDelete: Cascade)
+  type      EngagementEventType
+  createdAt DateTime            @default(now())
+
+  @@index([userId, createdAt])
+  @@index([beatId])
 }
 
 model Offer {

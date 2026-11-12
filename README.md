@@ -10,6 +10,7 @@ A TikTok-style vertical feed for discovering and selling beats. Producers upload
 - **Vertical beat feed** — full-bleed artwork, autoplay-muted audio, like/save/share/comment counters, tag filtering, wheel-to-advance
 - **SoundCloud-style waveform** — real per-track amplitude bars computed client-side from the audio file, click/drag to seek, with an on-demand fallback for beats that predate stored waveform data
 - **Beat upload pipeline** — drag-and-drop audio + artwork (or pick from gradient presets), tag autocomplete, direct browser → object storage upload (audio/artwork bytes never pass through the Next.js server)
+- **Artist genre interests** — up to 6 free-form genres picked at signup; the Discover feed reorders (never filters) to surface beats whose tags match the artist's genres
 - **Producer/Artist profiles** — editable bio, banner, theme; artists can link finished tracks back to a beat they licensed
 - **Offer/negotiation UI, inbox, comments** — in progress; see [Known Gaps](#known-gaps-not-yet-persisted)
 
@@ -58,8 +59,12 @@ model Beat {
 }
 
 model Tag {
-  id, name, slug, useCount
-  beats  Beat[]
+  id, name, slug
+  type            TagType          // GENRE (default) | STYLE
+  useCount                         // beats using this tag
+  interestCount                    // users who picked it as a genre
+  beats           Beat[]
+  interestedUsers User[]           // users whose interests include it
 }
 ```
 
@@ -191,6 +196,57 @@ prisma/
 proxy.ts                       Route protection (Next.js 16's middleware.ts replacement)
 docker-compose.yml              MinIO service definitions
 ```
+
+## Recommendation Algorithm
+
+The feed is personalized server-side. All logic lives in `lib/recommendations/`, and **every tunable number is exported from `lib/recommendations/constants.ts`** — tune there, nothing else hardcodes values.
+
+### Signals
+
+Every user interaction is stored as an `EngagementEvent` and weighted:
+
+| Event | Weight |
+|---|---|
+| `BUY` (license granted — free claim or paid) | 6 |
+| `OFFER` (offer sent) | 6 |
+| `FOLLOW_PRODUCER` | 5 |
+| `SAVE` | 4 |
+| `LIKE` · `COMMENT` | 3 |
+| `PLAY_COMPLETE` · `TAG_TAP` | 2 |
+| `PLAY_50` (listened past 50%) | 1 |
+| `SKIP` (beat visible < 3s) | −2 |
+
+Events older than `EVENT_WINDOW_DAYS` (90) stop counting entirely. Every event's influence halves every `DECAY_HALF_LIFE_DAYS` (30): a week-old like counts ~1.14×, a two-week-old one ~1.30× — **weight × 0.5^(ageInDays / 30)**.
+
+### Score formula
+
+Each candidate beat is scored against the viewer's taste:
+
+```
+score = 0.60 × similarity      // cosine between the beat's tagVector and your tasteVector
+      + 0.20 × producerAffinity // how much you engage this producer (normalized within the page)
+      + 0.10 × recency          // 1 today → 0 at RECENCY_ZERO_DAYS (60)
+      + 0.10 × popularity       // event count vs the page's most-engaged beat
+      [+ FOLLOW_BONUS 0.15 if you follow the producer]  // capped at 1.0
+```
+
+Similarity comes from pgvector: beats carry a 256-dimension multi-hot vector over their tags (`L2-normalized`); users carry an accumulated, decayed `tasteVector` rebuilt after every event. Explore beats are picked so that **none** of their tags touched your taste.
+
+### Feed composition
+
+`GET /api/feed` returns `FEED_PAGE_SIZE` (10) beats: the **8 top-scored** ranked beats plus **2 random exploration beats** (zero-affinity tags), then funneled through the same exclusions — your own beats, anything you engaged within `SEEN_EXCLUSION_DAYS` (7 days), and sold exclusives. Pages page-length repeatedly with an opaque cursor that remembers everything delivered (no session duplicates). If filtering empties the page against small catalogs, it falls back gracefully (relaxed rules, then unowned-first, then anything) — the feed never renders blank.
+
+### Cold start
+
+New users (fewer than `COLD_START_MIN_EVENTS` = 5 events) are ranked by **popularity × recency** instead of similarity until the fifth event lands — after that the full score switches on automatically.
+
+### Tag filtering
+
+`GET /api/feed?tag=<name>` returns only beats carrying that tag (same exclusions, no exploration slots, 404 if the tag is unknown).
+
+### Tuning
+
+Open `lib/recommendations/constants.ts` — `EVENT_WEIGHTS`, `DECAY_HALF_LIFE_DAYS`, `EVENT_WINDOW_DAYS`, `VECTOR_DIM`, `SCORE_WEIGHTS`, `FOLLOW_BONUS`, `FEED_PAGE_SIZE` / `FEED_RANKED_SLOTS` / `FEED_EXPLORE_SLOTS`, `COLD_START_MIN_EVENTS`, `SEEN_EXCLUSION_DAYS`, `RECENCY_ZERO_DAYS`, `CANDIDATE_LIMIT`, and `SKIP_UNDER_MILLIS` — change, save, reload. Verification suites live in `scripts/*.test.ts` (`node --env-file=.env --test scripts/rec.test.ts`) and the demo data is `node --env-file=.env scripts/seed-recommendations.ts` (login: `rec-a@prod4me.dev` / `password123`).
 
 ## Known Gaps (not yet persisted)
 

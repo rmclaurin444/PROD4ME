@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { beatInclude, getBeats } from '@/lib/beats'
 import { dollarsToCents } from '@/lib/offers'
 import { MAX_PRICE_DOLLARS } from '@/lib/money'
+import { rebuildBeatVector } from '@/lib/recommendations/vectors.ts'
 
 function slugify(value: string) {
   return value
@@ -140,6 +141,13 @@ export async function POST(request: Request) {
         data: { useCount: { increment: 1 } },
       })
     }
+
+    // vector: keep the beat's tagVector in sync (tags are immutable afterwards
+    // in the current product, so creation is the only hook today). Fire and
+    // forget — a vector failure must never fail an upload.
+    void rebuildBeatVector(beat.id).catch(err =>
+      console.warn('rebuildBeatVector failed for', beat.id, err)
+    )
 
     return NextResponse.json({ beat }, { status: 201 })
   } catch (error) {

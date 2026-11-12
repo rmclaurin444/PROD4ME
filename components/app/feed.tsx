@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Bookmark, Heart, MessageCircle, Share2, Volume2, VolumeX, X } from 'lucide-react'
 import { Avatar, TagPills } from '@/components/app/ui'
 import { formatCount } from '@/components/app/data'
 import { ARTWORK_PRESETS } from '@/components/app/artwork-slot'
 import { Waveform } from '@/components/app/waveform'
 import { computePeaksFromBuffer } from '@/lib/upload-client'
+import { trackEvent } from '@/lib/recommendations/track'
 import { formatMoney } from '@/lib/money'
 
 function presetCss(id: string | null) {
@@ -95,7 +97,7 @@ export function Feed({
   owned: ('NON_EXCLUSIVE' | 'EXCLUSIVE')[]
   onNext: () => void
   isArtist: boolean
-  onPoster: (user: { name: string; role: string; avatar: string; bio: string }) => void
+  onPoster: (producer: { producerId: string }) => void
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -106,18 +108,36 @@ export function Feed({
   const [duration, setDuration] = useState(0)
   const [fallbackPeaks, setFallbackPeaks] = useState<number[] | null>(null)
 
+  // engagement tracking state — reset once per beat view (each play cycle)
+  const firedPlay50 = useRef(false)
+  const firedPlayComplete = useRef(false)
+
   useEffect(() => {
     setAudioFailed(false)
     setSoundOn(false)
     setCurrentTime(0)
     setDuration(0)
     setFallbackPeaks(null)
+    firedPlay50.current = false
+    firedPlayComplete.current = false
 
     const a = audioRef.current
     if (a) {
-      a.muted = true
+      // Try sound-on autoplay first; browsers block unmuted autoplay until
+      // the user has interacted with the page, so fall back to the muted
+      // TikTok-style autoplay when rejected.
+      a.muted = false
       a.currentTime = 0
-      a.play().catch(() => {})
+      a
+        .play()
+        .then(() => {
+          if (!cancelled) setSoundOn(true)
+        })
+        .catch(() => {
+          a.muted = true
+          a.play().catch(() => {})
+          if (!cancelled) setSoundOn(false)
+        })
     }
 
     let cancelled = false
@@ -166,6 +186,26 @@ export function Feed({
     if (!Number.isFinite(d) || d <= 0) return
     a.currentTime = fraction * d
     setCurrentTime(a.currentTime)
+  }
+
+  /** Playback-based engagement. The audio element is `loop`, so `ended` never
+   *  fires; completion is detected as playback approaching full duration,
+   *  once per view. PLAY_50 likewise fires once per view when half is heard. */
+  const handleAudioTimeUpdate = () => {
+    const a = audioRef.current
+    const d = a?.duration
+    const t = a?.currentTime ?? 0
+    setCurrentTime(t)
+
+    if (!d || !Number.isFinite(d) || d <= 0) return
+    if (t >= d / 2 && !firedPlay50.current) {
+      firedPlay50.current = true
+      trackEvent(beat.id, 'PLAY_50')
+    }
+    if (t >= d - 1 && !firedPlayComplete.current) {
+      firedPlayComplete.current = true
+      trackEvent(beat.id, 'PLAY_COMPLETE')
+    }
   }
 
   const handleShare = async () => {
@@ -218,7 +258,7 @@ export function Feed({
         loop
         preload="auto"
         onError={() => setAudioFailed(true)}
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onTimeUpdate={handleAudioTimeUpdate}
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
         onDurationChange={() => setDuration(audioRef.current?.duration ?? 0)}
       />
@@ -239,12 +279,7 @@ export function Feed({
             <button
               onClick={() =>
                 onPoster &&
-                onPoster({
-                  name: beat.producer,
-                  role: 'Producer',
-                  avatar: beat.avatar,
-                  bio: 'Producer on PROD4ME.',
-                })
+                onPoster({ producerId: beat.producerId })
               }
               className="flex items-center gap-3 text-left"
             >
@@ -259,7 +294,13 @@ export function Feed({
           <h1 className="text-5xl font-black tracking-tighter md:text-7xl">{beat.title}</h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
-            <TagPills tags={beat.tags} onTag={onTag} />
+            <TagPills
+              tags={beat.tags}
+              onTag={tagName => {
+                trackEvent(beat.id, 'TAG_TAP')
+                onTag(tagName)
+              }}
+            />
             {beat.bpm && <span className="rounded-md bg-white/15 px-2 py-1">{beat.bpm} BPM</span>}
             {beat.musicalKey && (
               <span className="rounded-md bg-white/15 px-2 py-1">{beat.musicalKey}</span>
@@ -359,16 +400,32 @@ export function Feed({
                   SOLD
                 </span>
               ) : owned.includes('NON_EXCLUSIVE') ? (
-                <span className="rounded-full bg-lime-300/20 px-3 py-2 text-[10px] font-black text-lime-300">
-                  IN LIBRARY
-                </span>
+                <>
+                  <span className="rounded-full bg-lime-300/20 px-3 py-2 text-[10px] font-black text-lime-300">
+                    IN LIBRARY
+                  </span>
+                  <Link
+                    href={`/studio?beat=${beat.id}`}
+                    className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
+                  >
+                    OPEN IN STUDIO
+                  </Link>
+                </>
               ) : beat.price === 0 ? (
-                <button
-                  onClick={onOffer}
-                  className="rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
-                >
-                  GET FREE
-                </button>
+                <>
+                  <button
+                    onClick={onOffer}
+                    className="rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
+                  >
+                    GET FREE
+                  </button>
+                  <Link
+                    href={`/studio?beat=${beat.id}`}
+                    className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
+                  >
+                    OPEN IN STUDIO
+                  </Link>
+                </>
               ) : (
                 <>
                   <button
@@ -383,6 +440,12 @@ export function Feed({
                   >
                     MAKE OFFER
                   </button>
+                  <Link
+                    href={`/studio?beat=${beat.id}`}
+                    className="rounded-full border border-white/25 px-3 py-2 text-[10px] font-black text-white/80 hover:bg-white/10"
+                  >
+                    TRY IN STUDIO
+                  </Link>
                 </>
               )}
             </div>

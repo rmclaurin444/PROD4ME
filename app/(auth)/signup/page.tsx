@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { ChevronLeft, Mic2, AudioLines, Check } from 'lucide-react'
+import { ChevronLeft, Mic2, AudioLines, Check, Music4 } from 'lucide-react'
+import { TagInput } from '@/components/app/tag-input'
+import { MAX_GENRES } from '@/lib/tags'
 
-type Step = 'details' | 'role'
+type Step = 'details' | 'role' | 'genres'
 type Role = 'PRODUCER' | 'ARTIST'
 
 export default function SignUpPage() {
@@ -17,8 +19,13 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState<Role | null>(null)
+  const [genres, setGenres] = useState<string[]>([])
+  const [popularGenres, setPopularGenres] = useState<string[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const totalSteps = role === 'ARTIST' ? 3 : 2
+  const stepNumber = step === 'details' ? 1 : step === 'role' ? 2 : 3
 
   const validateDetails = () => {
     if (!name.trim()) return 'Name is required'
@@ -38,6 +45,55 @@ export default function SignUpPage() {
     setStep('role')
   }
 
+  const handleRoleContinue = () => {
+    if (!role) {
+      setError('Please select a role to continue')
+      return
+    }
+    setError('')
+    if (role === 'ARTIST') {
+      setStep('genres')
+    } else {
+      handleSubmit()
+    }
+  }
+
+  useEffect(() => {
+    if (step !== 'genres') return
+    let cancelled = false
+    const loadPopularGenres = async () => {
+      try {
+        const res = await fetch('/api/tags?type=genre')
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        setPopularGenres(
+          ((data.tags ?? []) as { name: string }[])
+            .map(t => t.name)
+            .slice(0, MAX_GENRES),
+        )
+      } catch {
+        // popular chips are decorative — ignore failures
+      }
+    }
+    loadPopularGenres()
+    return () => {
+      cancelled = true
+    }
+  }, [step])
+
+  const toggleGenre = (genre: string) => {
+    setGenres(current =>
+      current.includes(genre)
+        ? current.filter(g => g !== genre)
+        : current.length >= MAX_GENRES
+          ? current
+          : [...current, genre],
+    )
+  }
+
+  const suggestedGenres = popularGenres.filter(g => !genres.includes(g))
+
   const handleSubmit = async () => {
     if (!role) {
       setError('Please select a role to continue')
@@ -51,7 +107,13 @@ export default function SignUpPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role,
+          ...(role === 'ARTIST' && genres.length > 0 && { genres }),
+        }),
       })
 
       const data = await res.json()
@@ -85,11 +147,11 @@ export default function SignUpPage() {
 
   return (
     <div className="rounded-3xl border border-white/10 bg-white/[.03] p-6">
-      {step === 'details' ? (
+      {step === 'details' && (
         <>
           <h1 className="text-2xl font-black">Create your account</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Step 1 of 2 — Your details
+            Step {stepNumber} of {totalSteps} — Your details
           </p>
 
           <div className="mt-6 flex flex-col gap-4">
@@ -160,7 +222,9 @@ export default function SignUpPage() {
             </Link>
           </p>
         </>
-      ) : (
+      )}
+
+      {step === 'role' && (
         <>
           <button
             onClick={() => {
@@ -174,7 +238,7 @@ export default function SignUpPage() {
 
           <h1 className="text-2xl font-black">Choose your role</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Step 2 of 2 — This decides your tools. It can&apos;t be changed
+            Step {stepNumber} of {totalSteps} — This decides your tools. It can&apos;t be changed
             later.
           </p>
 
@@ -231,11 +295,11 @@ export default function SignUpPage() {
           )}
 
           <button
-            onClick={handleSubmit}
-            disabled={!role || loading}
+            onClick={handleRoleContinue}
+            disabled={!role}
             className="mt-6 w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {loading ? 'Creating account...' : 'Create account'}
+            {role === 'ARTIST' ? 'Continue' : 'Create account'}
           </button>
 
           {!role && (
@@ -243,6 +307,72 @@ export default function SignUpPage() {
               Select a role to continue
             </p>
           )}
+        </>
+      )}
+
+      {step === 'genres' && (
+        <>
+          <button
+            onClick={() => {
+              setStep('role')
+              setError('')
+            }}
+            className="mb-4 flex items-center gap-2 text-sm font-bold text-muted-foreground"
+          >
+            <ChevronLeft size={18} /> Back
+          </button>
+
+          <h1 className="text-2xl font-black">What genres are you into?</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Step {stepNumber} of {totalSteps} — Up to {MAX_GENRES}. This shapes
+            your Discover feed. You can change these later from your profile.
+          </p>
+
+          {suggestedGenres.length > 0 && (
+            <div className="mt-5">
+              <p className="text-xs font-bold text-muted-foreground">Popular on PROD4ME</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {suggestedGenres.map(genre => (
+                  <button
+                    key={genre}
+                    type="button"
+                    onClick={() => toggleGenre(genre)}
+                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 text-xs font-bold text-white/80 transition hover:border-lime-300/60 hover:text-lime-300"
+                  >
+                    <Music4 size={12} /> {genre}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <TagInput
+              value={genres}
+              onChange={setGenres}
+              max={MAX_GENRES}
+              suggestType="genre"
+              placeholder="Type a genre (trap, drill, jazz...) and hit Enter"
+            />
+          </div>
+
+          {error && (
+            <p className="mt-4 text-sm font-semibold text-red-400">{error}</p>
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="mt-6 w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {loading ? 'Creating account...' : 'Create account'}
+          </button>
+
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            {genres.length === 0
+              ? 'Optional — skip this and pick genres anytime.'
+              : `${genres.length}/${MAX_GENRES} picked — you can also skip adding more.`}
+          </p>
         </>
       )}
     </div>

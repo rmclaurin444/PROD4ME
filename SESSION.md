@@ -352,6 +352,131 @@ When resuming:
 
 ---
 
+---
+
+---
+
+# Tasks: recommendation system begins (2026-11-03, branch `social-media`)
+
+#---
+
+---
+
+## Quick fixes round 3 (2026-11-03): library grants & comments are engagement signals
+
+- **New event `COMMENT`** (weight 3 — between TAG_TAP and SAVE, judged strong-but-lighter than SAVE): added to `EventTypeName`/`EVENT_WEIGHTS` (constants), Prisma `EngagementEventType` enum (migration `20261103065000_add_comment_event`, hand-written `ALTER TYPE ... ADD VALUE` since `migrate dev` refuses non-interactive mode), fires client-side in app-shell when a comment is actually posted (dedupe intentionally absent — multiple comments mean multiple signals, like TAG_TAP).
+- **Library additions are now server-authorized BUY events:** new `lib/recommendations/record.ts#recordEngagementEvent` (create row + non-blocking vector rebuild). Wired into `POST /api/licenses/free` (after license create; dedupe P2002 path skips) and `lib/finalize.ts` (after the grant transaction commits, when `granted` flag set — the license-exclusive path that would otherwise never be tracked e.g. via webhook while the artist is away). **Client BUY trackers removed** from `purchase-modal.getFree` and `checkout-success` — they'd double-count the same grant now recorded at its single server-side true source.
+- Ran migrate deploy + generate + tsc clean (dev server paused PID→15372 for the engine lock; user restarts).
+
+## Quick fixes round 2 (2026-11-03): tag input no longer forces suggestions
+
+- **Bug:** with the suggestion list open, **Enter always adopted the highlighted (≈ previously used) tag** instead of what the user typed — beats kept getting old tags forced on them.
+- **Fix (`components/app/tag-input.tsx`):** Enter/comma now commits the **typed draft**. Suggestions only get adopted via an *explicit* choice — click, or arrow-key navigation (`browsingSuggestions` flag, set by ↓/↑, reset whenever the draft text changes, on tag commit, and on suggestion adoption). Escape closes the list. Suggestions stay visible and optional in both the upload tag input and the signup genre input (shared component).
+- `tsc --noEmit` clean; both places using `TagInput` (upload + signup genres) get this behavior for free.
+
+## Quick fixes (2026-11-03)
+
+- **Placeholder beats removed.** All 4 seed beats (`NIGHTSHIFT`, `VELVET ROOM`, `LATE CHECKOUT`, `NO SIGNAL` — fictional `seed/*.mp3` keys with no real audio) deleted from prod4me along with their cascaded events; `Tag.useCount` recomputed. `prisma/seed.mjs` no longer creates beats at all (producers + test accounts only) — beats enter via Upload only. Remaining beats are real uploads (`goonrixh`, `covington hwy`).
+- **Producer profile from the feed works.** Clicking a producer name previously looked up a hardcoded 4-name mock array (`users` in app-shell) and landed on `UserProfile`, which never showed beats. Now: `app/page.tsx` loads the real producer list (prop `producers` — id/name/avatar/bio), app-shell maps the feed's `onPoster({producerId})` (feed now passes the producer's id) to the real row, and `UserProfile` renders a **Beats · N** grid (art, title, tags, price, plays) — data courtesy of the already-loaded beats; empty state for producers without uploads.
+
+### Task 5 — recommendation seed data + verification suite (2026-11-03, branch `social-media`)
+
+- **`scripts/seed-recommendations.ts`:** 3 viewers (rec-a/b/c@prod4me.dev, password123) — A engages trap/drill, B house/techno, C ambient/lofi (5 LIKEs + SAVE + PLAY_50 + SKIP + FOLLOW_PRODUCER each, mirrored pattern via `engagementSpecFor`), 2 producers, 30 beats across 6 `rec-*` tags (5 per tag; last two slots per group cross-tag with the next group), one sold-exclusive beat baked in (G3K1, exclusion test), `rebuildBeatVector` for all + `rebuildUserVector` per viewer. Cleanup targets **only** `rec-*` accounts (earlier draft included `@prod4me.dev` catch-alls that would've nuked melok/niasaint/… — fixed). `--clean` purges fixtures only. Fixture geometry deliberately leaves ~5 unseen beats per user carrying engaged tags for stable top-5 assertions.
+- **`scripts/rec.test.ts`** (6 pass; asserts the DONE-WHEN list): top-5 has ≥3 engaged-tag beats per viewer · page 10 = 8 ranked + 2 explore whose tags avoid engaged groups · exclusions (own/seen-7d/sold) hold across all pages · follow bonus strictly orders + caps at 1.0 · cold-start flips at the 5-event threshold (4→cold true, 5→full scoring) · tag feed is tag-pure, no explore slots, unknown tag → FeedTagNotFoundError. zx-cold user created per run and self-cleaned.
+- **README "Recommendation Algorithm" section** added (signals/weights table, decay formula, score formula exactly as implemented, feed composition + exclusions, cold start, cursor, tag mode, tuning via constants.ts, test/seeding entry points).
+- **Review-pass fixes across earlier tasks:** 🐞 explore-gate slot bound used `CANDIDATE_LIMIT` (200) instead of `VECTOR_DIM` (256) — tags with vectorIndex ≥ 200 escaped the zero-affinity gate; 🐞 `/api/feed` could theoretically be statically cached (GET without dynamic marker) → `export const dynamic = 'force-dynamic'`; 🐞 seed-recommendations stored UN-hashed passwords (bcrypt compare in login would've failed) → hashed via bcryptjs; 🐞 `--clean` flag didn't halt reseeding → now cleanup-only; 🐞 rec.test asserted producers "warm" (producers are legitimately cold) → filter restricted to the 3 viewers; dead code in rec.test removed.
+- **Full battery final state: rec 6/6 · feed 4/4 · scoring 6/6 · `tsc` clean.** Seed script also idempotent (re-runs wipe + rebuild their own fixtures only).
+
+## Feed "blank" hardening (2026-11-03) — UI never blank
+
+- **Root cause of a blank personalized feed:** rules working as designed on a tiny database — the user engaged (SKIP most recently) with ALL beats in the DB within 7 days, so seen-exclusion emptied candidates AND the zero-affinity explore gate couldn't backfill (those tags were inside the taste vector).
+- **Fix — 3 server tiers in `lib/recommendations/feed.ts#getFeedPage`:**
+  1) strict personalized/explore (spec rules),
+  2) relaxed fallback: drop the 7-day-seen rule and the affinity gate (own-beat & sold exclusions kept), ranked populist × recency (up to FEED_PAGE_SIZE),
+  3) last-resort: allow own beats too (sold still excluded) — any beat on the platform ⇒ a page.
+- **UI guarantee (app-shell):** after every feed fetch, `ensureFeedNeverBlank()` hydrates `feedBeats` from the server-rendered `beats` prop if it's still empty (API 500/failure/empty) — playback-ready unpersonalized beats, so playback can never break.
+- Earlier mislead: the first curl check hit a dev server that wasn't actually running (0 node processes — user's dev was down), so "restart didn't help" couldn't be reproduced until this hardening landed. Tests: feed 4/4 pass + tsc clean.
+
+## Task 4 errata (2026-11-03): explore-slot IN clause rendered as a row-record
+
+- Bug reported live (`integer = record` from `GET /api/feed`): the explore beat gate rendered `IN ((0,7,8,...))` — `Prisma.raw('(0,7,...)')` wrapped the CSV in a second parentheses, so Postgres parsed a ROW/record literal instead of a value list. Fix: emit the bare CSV (`Prisma.raw(slotCsv)` → `IN (0,7,8,...)`); values are validated integers before inlining. Other `IN` sites were unaffected (id lists use `Prisma.join` with per-element params, creating one pair of parens at the template level).
+
+## Task 4 — personalized feed endpoint + UI wiring (2026-11-03, branch `social-media`)
+
+**`lib/recommendations/feed.ts` — `getFeedPage(userId, {cursor, tag})`:**
+- **Personalized:** FEED_RANKED_SLOTS (8) via `rankCandidates` (now takes `excludeBeatIds` for session dedupe) + random FEED_EXPLORE_SLOTS (2) explore beats whose tags carry **zero affinity** (non-zero tasteVector slots computed via `::text`, gates the SQL via validated inline slot list `t."vectorIndex" IN (...)`) up to FEED_PAGE_SIZE (10). Explore top-up fills the page when the ranked pool is small.
+- **Cold start:** fewer than COLD_START_MIN_EVENTS (5) events → ranked slots by **popularity × recency** (both unit-normalized, product; popularity = per-beat window event count ÷ max).  Auto-switches to full scoring at threshold.
+- **Tag mode:** `?tag=name` — tag-unknown throws `FeedTagNotFoundError` (route → 404). Tag-scoped rows passed through the same exclusions, scored with FULL scoring (per-beat similarity via reflection JOIN + buildContext/scoreBeat) or popularity×recency when cold. NO explore slots.
+- **Cursor:** base64url `{s: [delivered ids]}` — resilient to reshuffles; every pool (ranked, explore, tag) filters `notIn seen`; client additionally dedupes on append. nextCursor null when a page can't fill FEED_PAGE_SIZE.
+- **Exclusions identical everywhere:** own beats / seen-last-7d-engaged / sold exclusives (shared `exclusionsWhere`).
+- Returns full **ShapedBeat** payloads (audio presign + artwork + counters) via extracted `lib/beats.ts#shapeBeat` — playback behavior preserved by construction. lib/beats imports de-aliased to relative `.ts` so node test scripts can import it.
+
+**`app/api/feed/route.ts`:** GET, 401 unauth, 404 on unknown tag, 500 catch, returns `{beats, nextCursor, coldStart}`.
+
+**UI (`components/app/app-shell.tsx`):** feed data source replaced — new state `feedBeats/feedCursor/feedTag/feedLoading`; mount + tag-change effects fetch `/api/feed`; wheel-next prefetches the next page before hitting the end; tag-pill tap (`handleFeedTagTap`) switches to tag mode (toggle-off supported), chip dismiss (`clearFeedTag`) returns to the personalized feed; server-rendered `beats` prop remains for dashboard/profile/library (NOT the feed). Loading state added to the empty branch; all Feed styling/playback untouched (same ShapedBeat shape).
+
+**Tests:** `scripts/feed.test.ts` (node:test, disposable fixtures) 4/4 pass: (1) ≥COLD events users w/ different histories (trap vs jazz) get different feeds; (2) 0-event user gets populated feed + coldStart=true; (3) cursor walk pages → zero duplicates & all fixture beats delivered exactly once; (4) tag feed only returns matching beats + unknown tag → FeedTagNotFoundError. scoring.test.ts still 6/6. `tsc` clean.
+
+**Flags/interpretations:** (1) explore tag gate = "all of the beat's tag slots must be zero-weight in the user's tasteVector" — a NULL-vectorIndex tag counts as zero-affinity (not vector-covered); (2) explore count = 2 within spec, but tops up to fill a page whose ranked side can't (small DB) — revisit if undesired; (3) event threshold counts ALL-TIME events (window ambiguity noted for TASK parity); (4) tag-mode scoring re-uses per-beat cosine (beats outside top-200 candidates are included, unlike ranked mode); (5) cold-start threshold counts events regardless of role (producers personalize too); (6) 401/404 paths verified by inspection only — server not started by me (per your rule), awaiting your UI runthrough.
+
+# Task 3 — candidate retrieval + scoring (2026-11-03, branch `social-media`)
+
+**`lib/recommendations/scoring.ts`** — `getCandidates(userId)`: single `$queryRaw` (pgvector `<=>` cosine) returning top `CANDIDATE_LIMIT` (200) beats by `1 - (tagVector <=> tasteVector)` with SQL-side exclusions (own beats via `producerId <> userId` / any event on a beat within `SEEN_EXCLUSION_DAYS` via NOT IN subquery / `exclusiveSold`). Null/no tasteVector → `[]` (cold-start). `scoreBeat(userId, beat, similarity, context)`: weighted blend (`similarity 0.6 × clamp01`, `producer 0.2` (raw decayed sum per producer ÷ max in candidate set), `recency 0.1` (linear 1→0 over `RECENCY_ZERO_DAYS`), `popularity 0.1` (event count in event-window ÷ max in set)), `FOLLOW_BONUS` (+0.15 only for followed producers), capped at 1.0. `buildContext(userId, candidates, followedProducerIds?)` computes the per-candidate aggregates (window = EVENT_WINDOW_DAYS). `rankCandidates(userId, {followedProducerIds?})` → `RankedBeat[]` sorted score desc (ties: similarity desc → candidate input order). Follow persistence doesn't exist yet (in-memory mock in app-shell), so follows enters as a scored-context parameter — task flagged; a `Follow` model + API is a future task.
+
+**Tests:** `scripts/scoring.test.ts` (node:test runner, real DB, disposable fixtures w/ ids `zx*` emails / `zxcheck-*` slug tags, self-cleaning + `cleanupPreviousRun()` for crashed runs). Run: `node --env-file=.env --test scripts/scoring.test.ts`. 6/6 pass: (a) trap-taste user ranks pure-trap beat first (cosine 1.0), no-overlap beats never filtered; (b) SKIP lowers the beat's cosine through the taste vector + excluding it near-term via seen-rule (SKIP remains a similarity signal for OTHER beats' affinities); (c) 100-day event → null taste → no effect at all; (d) follow bonus strictly ordering + hard cap 1.0; (e) own/seen/sold exclusions respected in SQL; (f) null taste → `[]`.
+
+**Test-runner notes (dev-env learnings):** PRISMA `log: ['query']` spam floods test output — consider scoping to error in dev later; `tsconfig.target` ES6 → bumped **ES2022** (top-level await in ts scripts for node:test; SWC owns real emit so Next unaffected); `tsbuildinfo` incremental cache can serve stale errors after config change. `$queryRaw` gotcha repeated: float8 numbers deserialize fine, vector columns must `::text`.
+
+**Interpretations/flags:** (1) `similarity = 1 - cosine_distance` ∈ [-1,1] then clamp01 in scoring (negative similarity possible → cannot boost); (2) popularity uses events *within the event window* ("total event count" was ambiguous — window version stays fresh & keeps the per-beat counts cheap); (3) producerAffinity includes events on ANY of that producer's beats (not just candidate rows) since taste lives at the producer level; (4) rankCandidates is pure server-side: no beat fetch of artwork (presigned/public URLs happen at the feed-mapping layer, next task); (5) no API route yet — ranking is a library call for the feed task; (6) SQL exclusions rely on non-null `tagVector` (upgraded beats only) — unvectored beats surface later through explore slots, not ranking.
+
+# Task 2 — pgvector tag/taste vectors (2026-11-03, branch `social-media`)
+
+**pgvector install:** the `vector` extension was NOT bundled with the EDB PG18 install. Installed pgvector **0.8.6** (Windows build) from `andreiramani/pgvector_pgsql_windows` release assets (community repo, 232★, most-active maintained build; drop-in: `lib\vector.dll` into `...\PostgreSQL\18\lib`, extension SQLs into `...\share\extension`, headers into `...\include\server`). Postgres stopped (pg_ctl) during copy per readme, restarted, then `CREATE EXTENSION vector` on `prod4me`. ⚠️ third-party binary — acceptable for dev; revisit trust/upgrade path before prod. Official alternative exists: `pgvector/pgvector` Docker image (not used — native-PG chosen earlier).
+
+**Migration `20261103053000_add_pgvector_tag_vectors`:** `CREATE EXTENSION IF NOT EXISTS vector` FIRST, then Prisma-diff DDL (`Beat.tagVector vector(256)`, `User.tasteVector vector(256)`, `Tag.vectorIndex int unique`), backfill of vectorIndex (ROW_NUMBER-1 over tag id order; tags beyond slot 255 stay NULL), BEFORE-INSERT trigger `assign_tag_vector_index` (next = max+1, NULL when ≥256 — covers ALL creation paths incl. seed/connectOrCreate), HNSW index `Beat_tagVector_hnsw_idx` using vector_cosine_ops. Crafted non-interactively via `prisma migrate diff --from-migrations --shadow-database-url` (transient shadow db `prisma_shadow_pgvector`, dropped after). NOTE the live-migration-bug: first apply put `tasteVector` on the wrong table (pilot error, caught by runtime test); fixed schema+SQL+live DB (dropBeat/addUser) in place.
+
+**`lib/recommendations/vectors.ts`** (all vector I/O raw SQL `$executeRaw` casts `::vector`, string literal `[..]` bracket format; `vectorToString`, `buildMultiHot` L2, `rebuildBeatVector(beatId)` L2-normalized multi-hot (null slots skipped; zero→stored NULL), `rebuildUserVector(userId)`: sum over events in EVENT_WINDOW_DAYS of EVENT_WEIGHTS×0.5^(age/DHALFLIFE) on the beat's UNNORMALIZED multi-hot (SKIP subtracts via negative weight), L2-normalize (zero→NULL store)). Constants imported ONLY from `./constants.ts` (VECTOR_DIM, weights, decay).
+
+**Node/Next import voyage:** this task uses explicit `.ts` extension imports inside `lib/recommendations/**` + `scripts/**` because raw Node (`node scripts/*.ts`) cannot resolve alias/extensionless TS imports; Next/SWC handles them fine. tsconfig gained `allowImportingTsExtensions` (noEmit already true). App routes import vectors.ts with the same relative `.ts` path for consistency (e.g. `@/lib/recommendations/vectors.ts`).
+
+**Wiring:** `POST /api/events` → after create, non-blocking `void rebuildUserVector(userId).catch(warn)` (dedupe-return path skips rebuild). `POST /api/beats` → after create, non-blocking `void rebuildBeatVector(beat.id).catch(warn)`. No tag-edit path exists today, so "tags changed" = creation only; revisit if a tag-edit UI lands (post-offers invariants unchanged). `prisma seed` needs no change (trigger assigns slots; beat vectors still seeded by the backfill script below).
+
+**Scripts:** `scripts/backfill-beat-vectors.ts` (runs rebuildBeatVector for all beats; idempotent) — rerun after bulk tag changes. `scripts/verify-vectors.ts` (throwaway sanity: beat norms + one-taste cosine check) — safe to delete.
+
+**Verified (DONE-WHEN):** every beat's tagVector dims=256 norm≈1.0 with 1/√n at exact tag slots (6/6 beats, incl. user-uploaded `goonrixh`/`covington hwy`); fresh user + single LIKE on a beat → tasteVector unit-norm cosine distance 0 vs that beat (points exactly at its tag slots); source rankings unchanged. `tsc --noEmit` clean. Manual-test tag additions (`plugg`, `neosoul`, `brentfaiyaz`, …) got trigger-assigned slots 7–13 automatically. `engine pg18` → on fresh installs, `CREATE EXTENSION` must run BEFORE migrate (see migration header).
+
+**Interpretations/flags:** (1) sorted backfill uses `id` order not createdAt (Tag has no createdAt; deterministic regardless); (2) taste uses *unnormalized* multi-hot per spec — repeated exposure accumulates (deliberate vs. averaging engagement); (3) future-dated events (clock skew) treated as age 0; (4) `$queryRaw` can't return vector columns — cast `::text` on any vector read (verified error otherwise); (5) dev-server restart required for the regenerated client (I stopped PID for generate per EPERM gotcha; user restarts pnpm dev themselves).
+
+---
+
+## Task 1 — Engagement event capture
+
+**Infrastructure:** `lib/recommendations/` is the home of ALL recommendation logic; every tunable lives in `lib/recommendations/constants.ts` (EVENT_WEIGHTS, DECAY_HALF_LIFE_DAYS=30, EVENT_WINDOW_DAYS=90, VECTOR_DIM=256, SCORE_WEIGHTS {similarity .60/producer .20/recency .10/popularity .10}, FOLLOW_BONUS, FEED_PAGE_SIZE/RANKED/EXPLORE (10/8/2), COLD_START_MIN_EVENTS, SEEN_EXCLUSION_DAYS, RECENCY_ZERO_DAYS, CANDIDATE_LIMIT, SKIP_UNDER_MILLIS=3000). Prisma CANNOT query vector columns → all future pgvector reads/writes via `$queryRaw`/`$executeRaw`. No user-visible UI changes; feed keeps current shape. Test-runner note: repo has no test framework — "run the tests" = tsc + raw SQL/API-level verification unless a task adds otherwise.
+
+**Schema (migration `20261103040518_add_engagement_events`):** enum `EngagementEventType { PLAY_50, PLAY_COMPLETE, TAG_TAP, LIKE, SAVE, FOLLOW_PRODUCER, OFFER, BUY, SKIP }`; model `EngagementEvent {userId, beatId, type, createdAt}` with `@@index([userId, createdAt])` + `@@index([beatId])`; cascade relations on User + Beat. NOTE: enum values must stay in sync with `EVENT_WEIGHTS` keys in constants.ts (validated at runtime in the route; a mismatch fails 400s, not silently).
+
+**API:** `POST /api/events` `{beatId, type}` — auth'd userId only; 401 unauthenticated; 400 invalid JSON/type/beatId; LIKE & SAVE are idempotent per (user, beat, type) via findFirst-before-create → repeat returns 200 `{ok,duplicate:true}` and writes no row (server-side truth; a client un-like + re-like does NOT log a second LIKE).
+
+**Client tracking (`lib/recommendations/track.ts`):** `trackEvent(beatId, type)` — fire-and-forget `fetch` with `keepalive:true`, failures swallowed, never awaited. Wired: feed.tsx (PLAY_50 ≥50% heard, PLAY_COMPLETE ≥ duration−1s once per view — audio is `loop` so `ended` never fires; TAG_TAP on pill taps via TagPills onTag wrapper), app-shell.tsx (LIKE/SAVE only on the *positive* action; SKIP when the visible beat changes or feed tab left and the outgoing beat was seen < 3s — at most one SKIP per beat view; not fired while a profile overlay is up), purchase-modal.tsx (OFFER on successful offer creation; BUY on free-license grant), checkout-success.tsx (BUY when payment SUCCEEDED — `/api/checkout` GET now also returns `beatId`).
+
+**Interpretations/flags:** BUY fires on server-confirmed completion (success page), not on checkout-button click; free-license grant counted as BUY (both are conversions through the same modal). AUDIO seek to 50% counts as PLAY_50 (no continuous-listening check — noted as acceptable for now). Event write failures are silent client-side by design (telemetry must never interrupt UX); a server outage is invisible to users, by rule.
+
+**Verified (real API + DB):** 11 curl cases — 401 unauth; 400 invalid type / unknown beat; PLAY_50/ SKIP/ TAG_TAP create rows; LIKE + SAVE dedupe (2 calls → 1 row each, 2nd returns `{ok,duplicate:true}`); DB row counts confirmed via psql. `tsc --noEmit` clean. Seed change: `artist@test.com` (password123) now created idempotently WITH interests drill + dark-trap + `interestCount` bump (was missing after machine reset — re-ran `pnpm seed` to pick it up).
+
+# Signup genre interests + interest-ranked feed (2026-11-03, branch `social-media`)
+
+**Feature:** Artists pick up to 6 free-form genres at signup (step 3 of the wizard, skippable; producers unaffected). Interests persist as `Tag` links on `User`, and `getBeats()` reorders (never filters) the artist's Discover feed by tag-overlap with their interests — beats sharing more picked genres float to the top, ties/newest otherwise. Producer feed and `/api/beats` stay chronological.
+
+**Why reuse `Tag`:** seeded beat tags (`drill`, `r&b`…) ARE genres, so a new artist's picks overlap existing beats immediately. Added `TagType` enum (`GENRE` default, `STYLE` reserved) + `Tag.interestCount` (users who picked it; `useCount` still counts beats) + implicit m2m `User.interests`/`Tag.interestedUsers` ("UserInterests"). Migration `20261103030237_add_tag_types_user_interests`.
+
+**Files:** `lib/tags.ts` (normalizeGenres cap 6, slug dedupe, getOrCreateGenreTags upsert-tx, incrementGenreInterestCounts) · `app/api/auth/register/route.ts` (optional `genres: string[]`, saved user+links atomically) · `app/api/tags/route.ts` (`?type=genre`; unauthenticated allowed ONLY with that param so signup can show popular chips — ranked by interestCount when no `q`) · `components/app/tag-input.tsx` (new `suggestType="genre"` prop) · `app/(auth)/signup/page.tsx` (3-step wizard for artists: details → role → genres w/ popular chips + skip; producers still 2-step, create directly) · `lib/beats.ts#getBeats(take, interestNames)` + `app/page.tsx` (loads `user.interests`, passes names for ARTIST) · `prisma/seed.mjs` (creates `artist@test.com` idempotently, password123, interests = drill + dark trap, and bumps those `interestCount`s).
+
+**Deliberately deferred:** editing interests post-signup (lands with the profile-persistence story), style/vibe taxonomies (`STYLE` enum value staged), "Because you follow X" feed badges, genre browse pages.
+
+**Test notes:** m6 artist account + interests → picks N. New artist signup w/ genres, skip path, duplicate coin ("Drill" by 2 users = 1 row), ordering flip on/off interests, upload autocomplete regression (`/api/tags?q=` unchanged shape). ⚠️ `pnpm dev` was running during implementation → `prisma generate` EPERM'd (known pitfall #9); regenerate after stopping dev, then restart.
+
+---
+
 ## Download feature (2026-10-14)
 
 - `GET /api/licenses/[id]/download` — artist-only (auth'd, license ownership enforced server-side), `objectExists` check, 5-min attachment presigned URL (`presignAttachmentDownload` in `lib/storage.ts`), filename = beat title. Download button on ArtistProfile library cards.

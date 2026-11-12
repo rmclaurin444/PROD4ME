@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { recordEngagementEvent } from '@/lib/recommendations/record.ts'
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -45,6 +46,13 @@ export async function POST(request: Request) {
         pricePaidCents: 0,
       },
     })
+
+    // engagement: a library addition is a strong signal — and since the grant
+    // itself is server-side, so is the event (non-blocking best-effort).
+    void recordEngagementEvent(session.user.id, beat.id, 'BUY').catch(err =>
+      console.warn('BUY event record failed', err)
+    )
+
     return NextResponse.json({ license: { id: license.id, licenseType: license.licenseType } }, { status: 201 })
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {

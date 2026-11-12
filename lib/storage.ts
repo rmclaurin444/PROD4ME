@@ -61,6 +61,29 @@ export async function presignUpload(bucket: string, key: string, expirySeconds =
   return getClient().presignedPutObject(bucket, key, expirySeconds)
 }
 
+/** Server-side direct upload (dev seeding tools); browsers use presigned PUTs. */
+export async function putObject(bucket: string, key: string, body: Buffer, contentType: string) {
+  return getClient().putObject(bucket, key, body, undefined, { 'Content-Type': contentType })
+}
+
+/** Server-side copy within a bucket — no bytes flow through Node. */
+export async function copyObject(bucket: string, targetKey: string, sourceKey: string) {
+  return getClient().copyObject(bucket, targetKey, `/${bucket}/${sourceKey}`)
+}
+
+/** Lists object keys+sizes under a prefix (dev audio pool). */
+export async function listObjectEntries(
+  bucket: string,
+  prefix: string
+): Promise<{ key: string; size: number }[]> {
+  const stream = getClient().listObjectsV2(bucket, prefix, true)
+  const out: { key: string; size: number }[] = []
+  for await (const obj of stream) {
+    if (obj.name) out.push({ key: obj.name, size: obj.size ?? 0 })
+  }
+  return out
+}
+
 export async function presignDownload(bucket: string, key: string, expirySeconds = 3600) {
   return getClient().presignedGetObject(bucket, key, expirySeconds)
 }

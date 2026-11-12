@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getBeats } from '@/lib/beats'
 import { getArtistLibrary } from '@/lib/licenses'
+import { devPanelEnabled } from '@/lib/dev-seed'
 import { AppShell } from '@/components/app/app-shell'
 
 export default async function Page() {
@@ -14,13 +15,26 @@ export default async function Page() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
+    include: {
+      interests: { select: { id: true, name: true } },
+    },
   })
 
   if (!user) {
     redirect('/login')
   }
 
-  const beats = await getBeats()
+  // Real producer directory for search results + producer pages (an empty
+  // `users` mock array with fabricated follower counts lives no longer).
+  const producers = await prisma.user.findMany({
+    where: { role: 'PRODUCER' },
+    select: { id: true, name: true, avatar: true, bio: true },
+    orderBy: { name: 'asc' },
+  })
+
+  // Only artists see the genre step, so only their Interests rank the feed.
+  const interestNames = user.role === 'ARTIST' ? user.interests.map(tag => tag.name) : []
+  const beats = await getBeats(50, interestNames)
   const library = user.role === 'ARTIST' ? await getArtistLibrary(user.id) : []
 
   const ownedOffers =
@@ -44,6 +58,8 @@ export default async function Page() {
       beats={beats}
       library={library}
       openOffers={ownedOffers}
+      producers={producers}
+      devPanel={devPanelEnabled()}
     />
   )
 }

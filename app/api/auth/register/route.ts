@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { normalizeGenres, getOrCreateGenreTags, incrementGenreInterestCounts } from '@/lib/tags'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, email, password, role } = body
+    const { name, email, password, role, genres } = body
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json(
@@ -48,6 +49,16 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
+    // Optional genre interests (signup shows this step to artists only, but
+    // the API accepts them for any role). Validated + fetched-or-created
+    // before the user so the transaction below only links existing rows.
+    const { genres: normalizedGenres, error: genreError } = normalizeGenres(genres)
+    if (genreError) {
+      return NextResponse.json({ error: genreError }, { status: 400 })
+    }
+    const genreTags = await getOrCreateGenreTags(normalizedGenres)
+    const genreTagIds = genreTags.map(tag => tag.id)
+
     const user = await prisma.user.create({
       data: {
         name: name.trim(),
@@ -58,8 +69,13 @@ export async function POST(request: Request) {
           role === 'PRODUCER'
             ? 'Producer on PROD4ME.'
             : 'Artist on PROD4ME.',
+        ...(genreTagIds.length > 0 && {
+          interests: { connect: genreTagIds.map(id => ({ id })) },
+        }),
       },
     })
+
+    await incrementGenreInterestCounts(genreTagIds)
 
     return NextResponse.json(
       {

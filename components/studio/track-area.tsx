@@ -29,14 +29,15 @@ const BEAT_MIME = 'application/x-prod4me-beat'
 const IMPORTED_MIME = 'application/x-prod4me-imported'
 const MIN_CLIP_DUR = 0.25
 
-/** Solid header-strip hue for each CLIP_COLORS slot. */
+/** Solid header-strip hue for each CLIP_COLORS slot — grayscale ramp plus
+ *  brand, so track colors stay meaningful in the black-and-white theme. */
 const STRIP_COLORS = [
-  'bg-lime-300',
-  'bg-emerald-500',
-  'bg-teal-500',
-  'bg-amber-400',
-  'bg-rose-500',
-  'bg-sky-500',
+  'bg-brand',
+  'bg-foreground/70',
+  'bg-foreground/45',
+  'bg-warning',
+  'bg-error',
+  'bg-muted-foreground',
 ]
 
 type DragMode = 'move' | 'trim-start' | 'trim-end'
@@ -221,15 +222,15 @@ export function TrackArea({
         {/* header row: + Add Track and snap/zoom on the left, ruler on the right */}
         <div
           style={{ height: RULER_H }}
-          className="sticky top-0 z-30 flex border-b border-white/10 bg-background"
+          className="sticky top-0 z-30 flex border-b border-border bg-background"
         >
           <div
             style={{ width: TRACK_HEADER_W }}
-            className="sticky left-0 z-40 flex flex-none items-center gap-2 border-r border-white/10 bg-background px-3"
+            className="sticky left-0 z-40 flex flex-none items-center gap-2 border-r border-border bg-background px-3"
           >
             <button
               onClick={onAddTrack}
-              className="flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs font-black text-muted-foreground hover:text-lime-300"
+              className="flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs font-black text-muted-foreground hover:text-brand"
             >
               <Plus size={15} />
               Add Track
@@ -239,8 +240,8 @@ export function TrackArea({
               aria-pressed={project.snap}
               title={project.snap ? 'Snap to grid: on' : 'Snap to grid: off'}
               className={`grid size-6 place-items-center rounded ${
-                project.snap ? 'text-lime-300' : 'text-muted-foreground'
-              } hover:bg-white/10`}
+                project.snap ? 'text-brand' : 'text-muted-foreground'
+              } hover:bg-surface-2`}
             >
               {project.snap ? <Magnet size={14} /> : <Grid3x3 size={14} />}
             </button>
@@ -272,7 +273,7 @@ export function TrackArea({
               return (
                 <div
                   key={i}
-                  className="absolute top-0 h-full border-l border-white/15"
+                  className="absolute top-0 h-full border-l border-border"
                   style={{ left: i * barPx }}
                 >
                   {i % labelEvery === 0 && (
@@ -284,7 +285,7 @@ export function TrackArea({
               )
             })}
             <span
-              className="absolute top-0 z-10 size-2.5 -translate-x-1/2 rotate-45 rounded-[2px] bg-lime-300"
+              className="absolute top-0 z-10 size-2.5 -translate-x-1/2 rotate-45 rounded-[2px] bg-brand"
               style={{ left: playhead * pxPerSec }}
             />
           </div>
@@ -293,7 +294,7 @@ export function TrackArea({
             <div className="absolute right-4 top-1 z-20 max-w-[28rem] truncate">
               <span
                 className={`rounded-lg px-3 py-1 text-xs font-bold ${
-                  note.kind === 'error' ? 'bg-rose-500/15 text-rose-300' : 'bg-lime-300/10 text-lime-300'
+                  note.kind === 'error' ? 'bg-error/15 text-error' : 'bg-brand/10 text-brand'
                 }`}
               >
                 {note.text}
@@ -311,7 +312,7 @@ export function TrackArea({
               key={track.id}
               style={{ height: LANE_H }}
               className={`relative flex border-b ${
-                selected ? 'border-lime-300/25' : 'border-white/[.06]'
+                selected ? 'border-brand/25' : 'border-border/60'
               }`}
               onPointerDown={() => onSelectTrack(track.id)}
             >
@@ -336,8 +337,8 @@ export function TrackArea({
                   dispatchPayload(readPayload(e), track.id, atSec)
                 }}
                 className={`relative flex-1 ${
-                  track.kind === 'beat' ? 'bg-lime-300/[.03]' : 'bg-white/[.012]'
-                } ${transport === 'recording' && track.armed ? 'ring-1 ring-inset ring-rose-500/50' : ''}`}
+                  track.kind === 'beat' ? 'bg-brand/[.03]' : 'bg-surface/50'
+                } ${transport === 'recording' && track.armed ? 'ring-1 ring-inset ring-error/50' : ''}`}
               >
                 {/* vertical grid that matches the ruler bars */}
                 <div
@@ -358,24 +359,24 @@ export function TrackArea({
                       role="button"
                       aria-label={`Clip ${clip.name}`}
                       onPointerDown={e => grab('move', e, track.id, clip)}
-                      className={`group absolute top-1.5 z-10 flex cursor-grab flex-col overflow-hidden rounded-lg border border-white/25 shadow-md active:cursor-grabbing ${colorClass}`}
+                      className={`group absolute top-1.5 z-10 flex cursor-grab flex-col overflow-hidden rounded-lg border border-border shadow-md active:cursor-grabbing ${colorClass}`}
                       style={{ left: clip.startSec * pxPerSec, width, height: LANE_H - 12 }}
                     >
                       <div
                         onPointerDown={e => grab('trim-start', e, track.id, clip)}
-                        className="absolute inset-y-0 left-0 z-10 w-2.5 cursor-ew-resize bg-white/10 opacity-0 transition group-hover:opacity-100"
+                        className="absolute inset-y-0 left-0 z-10 w-2.5 cursor-ew-resize bg-surface-2 opacity-0 transition group-hover:opacity-100"
                         aria-label="Trim clip start"
                       />
                       <div
                         onPointerDown={e => grab('trim-end', e, track.id, clip)}
-                        className="absolute inset-y-0 right-0 z-10 w-2.5 cursor-ew-resize bg-white/10 opacity-0 transition group-hover:opacity-100"
+                        className="absolute inset-y-0 right-0 z-10 w-2.5 cursor-ew-resize bg-surface-2 opacity-0 transition group-hover:opacity-100"
                         aria-label="Trim clip end"
                       />
 
                       <div className="pointer-events-none flex items-center gap-1 px-2 pt-1">
                         <span className="truncate text-[10px] font-black">{clip.name}</span>
                         {trimmed && (
-                          <span className="ml-auto shrink-0 rounded bg-black/25 px-1 text-[8px] font-black uppercase text-white/70">
+                          <span className="ml-auto shrink-0 rounded bg-surface-2 px-1 text-[8px] font-black uppercase text-muted-foreground">
                             trimmed
                           </span>
                         )}
@@ -416,7 +417,7 @@ export function TrackArea({
         >
           <div
             style={{ width: TRACK_HEADER_W }}
-            className="sticky left-0 z-20 flex-none border-r border-white/[.06] bg-background"
+            className="sticky left-0 z-20 flex-none border-r border-border/60 bg-background"
           />
           <div
             onDragOver={e => e.preventDefault()}
@@ -425,7 +426,7 @@ export function TrackArea({
               e.stopPropagation()
               dispatchPayload(readPayload(e), null, laneTimeFromEvent(e))
             }}
-            className="m-3 flex flex-1 items-center justify-center rounded-xl border border-dashed border-white/15"
+            className="m-3 flex flex-1 items-center justify-center rounded-xl border border-dashed border-border"
           >
             <span className="text-xs font-black text-muted-foreground/60">
               Drop an audio file here to add a track
@@ -437,7 +438,7 @@ export function TrackArea({
             overlays all of them; starts below the ruler and never covers the
             sticky header column (left offset includes the header width) */}
         <div
-          className="pointer-events-none absolute z-40 w-[2px] bg-lime-300"
+          className="pointer-events-none absolute z-40 w-[2px] bg-brand"
           style={{ top: RULER_H, bottom: 0, left: TRACK_HEADER_W + playhead * pxPerSec }}
         />
       </div>
@@ -481,7 +482,7 @@ function TrackHeader({
   return (
     <div
       style={{ width: TRACK_HEADER_W }}
-      className={`group sticky left-0 z-20 flex flex-none border-r border-white/10 bg-background ${
+      className={`group sticky left-0 z-20 flex flex-none border-r border-border bg-background ${
         selected ? 'shadow-[inset_0_0_0_1px_rgba(163,230,53,.2)]' : ''
       }`}
     >
@@ -500,7 +501,7 @@ function TrackHeader({
           aria-label={`Mute ${track.name}`}
           aria-pressed={track.muted}
           className={`size-6 rounded text-[10px] font-black ${
-            track.muted ? 'bg-amber-400 text-black' : 'bg-white/[.07] text-muted-foreground hover:text-foreground'
+            track.muted ? 'bg-warning text-brand-foreground' : 'bg-surface-2 text-muted-foreground hover:text-foreground'
           }`}
         >
           M
@@ -510,7 +511,7 @@ function TrackHeader({
           aria-label={`Solo ${track.name}`}
           aria-pressed={track.soloed}
           className={`size-6 rounded text-[10px] font-black ${
-            track.soloed ? 'bg-lime-300 text-black' : 'bg-white/[.07] text-muted-foreground hover:text-foreground'
+            track.soloed ? 'bg-brand text-brand-foreground' : 'bg-surface-2 text-muted-foreground hover:text-foreground'
           }`}
         >
           S
@@ -522,7 +523,7 @@ function TrackHeader({
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={`grid size-5 shrink-0 place-items-center rounded ${
-              track.kind === 'beat' ? 'bg-lime-300/20 text-lime-300' : 'bg-sky-400/15 text-sky-300'
+              track.kind === 'beat' ? 'bg-brand/20 text-brand' : 'bg-surface-2 text-foreground'
             }`}
           >
             {track.kind === 'beat' ? <Bus size={12} /> : <Mic size={12} />}
@@ -539,7 +540,7 @@ function TrackHeader({
                   setRenaming(false)
                 }
               }}
-              className="min-w-0 flex-1 rounded border border-lime-300/60 bg-white/[.06] px-1.5 py-0.5 text-xs font-black outline-none"
+              className="min-w-0 flex-1 rounded border border-brand/60 bg-surface-2 px-1.5 py-0.5 text-xs font-black outline-none"
               autoFocus
             />
           ) : (
@@ -549,7 +550,7 @@ function TrackHeader({
               title="Double-click to rename"
             >
               {track.name}
-              {track.armed && <span className="ml-1.5 inline-block size-2 rounded-full bg-rose-500" />}
+              {track.armed && <span className="ml-1.5 inline-block size-2 rounded-full bg-error" />}
             </span>
           )}
         </div>
@@ -563,7 +564,7 @@ function TrackHeader({
               aria-pressed={track.armed}
               title="Record-arm"
               className={`size-6 shrink-0 rounded text-[10px] font-black ${
-                track.armed ? 'bg-rose-500 text-white' : 'bg-white/[.07] text-muted-foreground hover:text-white'
+                track.armed ? 'bg-error text-foreground' : 'bg-surface-2 text-muted-foreground hover:text-foreground'
               }`}
             >
               ●
@@ -576,14 +577,14 @@ function TrackHeader({
             value={track.volume}
             onChange={e => onPatchTrack(track.id, t => ({ ...t, volume: Number(e.target.value) }))}
             aria-label={`Volume for ${track.name}`}
-            className="h-1 min-w-0 flex-1 accent-lime-300"
+            className="h-1 min-w-0 flex-1 accent-brand"
           />
           <span
-            className="relative grid size-7 shrink-0 place-items-center rounded-full border border-white/15 bg-white/[.04]"
+            className="relative grid size-7 shrink-0 place-items-center rounded-full border border-border bg-surface"
             title={`Pan ${track.pan === 0 ? 'center' : track.pan > 0 ? `right ${track.pan}` : `left ${Math.abs(track.pan)}`}`}
           >
             <span
-              className="absolute size-1 rounded-full bg-sky-300"
+              className="absolute size-1 rounded-full bg-foreground/70"
               style={{ transform: `rotate(${(track.pan / 100) * 135}deg) translateY(-9px)` }}
             />
           </span>
@@ -594,7 +595,7 @@ function TrackHeader({
             value={track.pan}
             onChange={e => onPatchTrack(track.id, t => ({ ...t, pan: Number(e.target.value) }))}
             aria-label={`Pan for ${track.name}`}
-            className="h-1 w-14 shrink-0 accent-sky-300"
+            className="h-1 w-14 shrink-0 accent-foreground"
           />
         </div>
       </div>
@@ -605,7 +606,7 @@ function TrackHeader({
           onClick={() => setMenuOpen(v => !v)}
           aria-label={`Track menu for ${track.name}`}
           className={`grid size-6 place-items-center rounded text-muted-foreground hover:text-foreground ${
-            menuOpen ? 'bg-white/10 text-foreground' : ''
+            menuOpen ? 'bg-surface-2 text-foreground' : ''
           }`}
         >
           <MoreHorizontal size={15} />
@@ -618,7 +619,7 @@ function TrackHeader({
               onClick={() => setMenuOpen(false)}
               onPointerDown={e => e.stopPropagation()}
             />
-            <div className="absolute right-1 top-8 z-40 w-56 rounded-2xl border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
+            <div className="absolute right-1 top-8 z-40 w-56 rounded-2xl border border-border bg-surface-2 p-1.5 shadow-2xl">
               <MenuItem
                 icon={<Pencil size={13} />}
                 label="Rename"
@@ -659,7 +660,7 @@ function TrackHeader({
                       }}
                       aria-label={`Color ${i + 1}`}
                       className={`size-4 rounded-full ${c.split(' ')[0]} ${
-                        track.colorIndex === i ? 'ring-2 ring-white/70' : ''
+                        track.colorIndex === i ? 'ring-2 ring-foreground/70' : ''
                       }`}
                     />
                   ))}
@@ -667,7 +668,7 @@ function TrackHeader({
               </div>
 
               {isAudio && (
-                <div className="mt-1 border-t border-white/10 px-2.5 pb-1 pt-2">
+                <div className="mt-1 border-t border-border px-2.5 pb-1 pt-2">
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Input
                     <select
@@ -675,7 +676,7 @@ function TrackHeader({
                       onChange={e => {
                         onPatchTrack(track.id, t => ({ ...t, inputId: e.target.value }))
                       }}
-                      className="mt-1 w-full rounded-lg border border-white/10 bg-white/[.05] px-2 py-1.5 text-xs font-bold outline-none focus:border-lime-300/60 [&>option]:bg-[#161616]"
+                      className="mt-1 w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-xs font-bold outline-none focus:border-brand/60 [&>option]:bg-surface-2"
                     >
                       {MOCK_INPUTS.map(input => (
                         <option key={input.id} value={input.id}>
@@ -727,7 +728,7 @@ function MenuItem({
       disabled={disabled}
       title={hint}
       className={`flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-xs font-bold ${
-        disabled ? 'cursor-not-allowed text-muted-foreground/40' : danger ? 'text-rose-300 hover:bg-rose-500/10' : 'text-foreground hover:bg-white/5'
+        disabled ? 'cursor-not-allowed text-muted-foreground/40' : danger ? 'text-error hover:bg-error/10' : 'text-foreground hover:bg-surface-2/50'
       }`}
     >
       <span className="flex items-center gap-2">

@@ -117,18 +117,18 @@ export function TagInput({
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 py-2.5 focus-within:border-lime-300/70">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 focus-within:border-brand/70">
         {value.map(tag => (
           <span
             key={tag}
-            className="flex items-center gap-1.5 rounded-full bg-lime-300/15 px-2.5 py-1 text-xs font-bold text-lime-300"
+            className="flex items-center gap-1.5 rounded-full bg-brand/15 px-2.5 py-1 text-xs font-bold text-brand"
           >
             #{tag.replace(/\s+/g, '')}
             <button
               type="button"
               onClick={() => removeTag(tag)}
               aria-label={`Remove tag ${tag}`}
-              className="hover:text-white"
+              className="hover:text-foreground"
             >
               <X size={12} />
             </button>
@@ -148,7 +148,7 @@ export function TagInput({
       </div>
 
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-white/10 bg-[#151515] shadow-2xl">
+        <ul className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
           {suggestions.map((s, i) => (
             <li key={s}>
               <button
@@ -158,7 +158,7 @@ export function TagInput({
                   addTag(s)
                 }}
                 className={`w-full px-3 py-2 text-left text-sm font-semibold ${
-                  i === highlight ? 'bg-white/10' : ''
+                  i === highlight ? 'bg-surface-2' : ''
                 }`}
               >
                 #{s.replace(/\s+/g, '')}

@@ -40,7 +40,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[.03] p-6">
+    <div className="rounded-3xl border border-border bg-surface p-6">
       {done ? (
         <>
           <h1 className="text-2xl font-black">Password updated</h1>
@@ -49,7 +49,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           </p>
           <Link
             href="/login"
-            className="mt-6 block w-full rounded-xl bg-lime-300 px-4 py-3 text-center text-sm font-black text-black"
+            className="mt-6 block w-full rounded-xl bg-brand px-4 py-3 text-center text-sm font-black text-brand-foreground"
           >
             Go to log in
           </Link>
@@ -62,7 +62,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           </p>
           <Link
             href="/forgot"
-            className="mt-6 block w-full rounded-xl bg-lime-300 px-4 py-3 text-center text-sm font-black text-black"
+            className="mt-6 block w-full rounded-xl bg-brand px-4 py-3 text-center text-sm font-black text-brand-foreground"
           >
             Request a new link
           </Link>
@@ -87,7 +87,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
                 required
               />
             </label>
-            {tooShort && <p className="text-xs font-semibold text-red-400">Must be at least 8 characters</p>}
+            {tooShort && <p className="text-xs font-semibold text-error">Must be at least 8 characters</p>}
 
             <label className="text-xs font-bold text-muted-foreground">
               Confirm new password
@@ -101,14 +101,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
                 required
               />
             </label>
-            {mismatch && <p className="text-xs font-semibold text-red-400">Passwords do not match</p>}
+            {mismatch && <p className="text-xs font-semibold text-error">Passwords do not match</p>}
 
-            {error && <p className="text-sm font-semibold text-red-400">{error}</p>}
+            {error && <p className="text-sm font-semibold text-error">{error}</p>}
 
             <button
               type="submit"
               disabled={loading || tooShort || mismatch}
-              className="mt-2 w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-40"
+              className="mt-2 w-full rounded-xl bg-brand px-4 py-3 text-sm font-black text-brand-foreground disabled:cursor-not-allowed disabled:opacity-40"
             >
               {loading ? 'Updating…' : 'Set new password'}
             </button>
@@ -118,7 +118,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Back to{' '}
-        <Link href="/login" className="font-bold text-lime-300">
+        <Link href="/login" className="font-bold text-brand">
           Log in
         </Link>
       </p>

@@ -39,7 +39,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[.03] p-6">
+    <div className="rounded-3xl border border-border bg-surface p-6">
       <h1 className="text-2xl font-black">Welcome back</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Log in to PROD4ME.
@@ -73,27 +73,27 @@ export default function LoginPage() {
         </label>
 
         {error && (
-          <p className="text-sm font-semibold text-red-400">{error}</p>
+          <p className="text-sm font-semibold text-error">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-2 w-full rounded-xl bg-brand px-4 py-3 text-sm font-black text-brand-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? 'Logging in...' : 'Log in'}
         </button>
       </form>
 
       <p className="mt-4 text-center text-sm text-muted-foreground">
-        <Link href="/forgot" className="font-bold text-lime-300">
+        <Link href="/forgot" className="font-bold text-brand">
           Forgot password?
         </Link>
       </p>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{' '}
-        <Link href="/signup" className="font-bold text-lime-300">
+        <Link href="/signup" className="font-bold text-brand">
           Sign up
         </Link>
       </p>

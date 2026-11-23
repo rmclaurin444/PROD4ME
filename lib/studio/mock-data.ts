@@ -9,14 +9,15 @@ import type {
 
 // ---- constants -------------------------------------------------------------
 
-/** Clip background palette (lime/emerald family matches the app theme). */
+/** Clip background palette — token-based so clips read correctly in the
+ *  dark-only workspace; index 3 is the recording color (error red). */
 export const CLIP_COLORS = [
-  'bg-lime-300/25 text-lime-200',
-  'bg-emerald-500/20 text-emerald-200',
-  'bg-teal-500/20 text-teal-200',
-  'bg-amber-400/15 text-amber-200',
-  'bg-rose-500/15 text-rose-200',
-  'bg-sky-500/15 text-sky-200',
+  'bg-brand/25 text-brand',
+  'bg-foreground/15 text-foreground',
+  'bg-foreground/10 text-foreground/90',
+  'bg-error/20 text-error',
+  'bg-foreground/20 text-foreground/90',
+  'bg-foreground/[.06] text-muted-foreground',
 ]
 
 export const LANE_H = 104 // px height of one combined track row (header + lane)

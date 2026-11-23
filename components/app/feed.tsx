@@ -238,6 +238,9 @@ export function Feed({
   }
 
   return (
+    // ARTWORK OVERLAY: everything below sits on beat artwork with a dark
+    // gradient scrim, so text, icons and controls keep hardcoded white/black
+    // styling in BOTH modes (theme tokens would become unreadable on images).
     <div
       className="relative flex min-h-screen flex-1 items-end overflow-hidden"
       onWheel={e => {
@@ -245,7 +248,7 @@ export function Feed({
       }}
     >
       {tag && (
-        <div className="absolute left-5 top-20 z-20 flex items-center gap-2 rounded-full border border-white/15 bg-black/60 px-3 py-2 text-sm font-black backdrop-blur">
+        <div className="absolute left-5 top-20 z-20 flex items-center gap-2 rounded-full border border-white/15 bg-black/60 px-3 py-2 text-sm font-black text-white backdrop-blur">
           #{tag.replaceAll(' ', '')}
           <button onClick={onClear} aria-label="Back to all beats">
             <X size={14} />
@@ -286,13 +289,13 @@ export function Feed({
             >
               <Avatar text={beat.avatar} />
               <div>
-                <p className="text-sm font-bold">{beat.producer}</p>
+                <p className="text-sm font-bold text-white">{beat.producer}</p>
                 <p className="text-xs text-white/60">beat · {formatCount(beat.plays)} plays</p>
               </div>
             </button>
           </div>
 
-          <h1 className="text-5xl font-black tracking-tighter md:text-7xl">{beat.title}</h1>
+          <h1 className="text-5xl font-black tracking-tighter text-white md:text-7xl">{beat.title}</h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
             <TagPills
@@ -308,7 +311,7 @@ export function Feed({
             )}
             <span className="text-white/60">
               {beat.price === 0 ? (
-                <span className="rounded-full bg-lime-300 px-2 py-1 font-black text-black">FREE</span>
+                <span className="rounded-full bg-brand px-2 py-1 font-black text-brand-foreground">FREE</span>
               ) : (
                 `from $${beat.price}`
               )}
@@ -319,7 +322,7 @@ export function Feed({
               )}
             </span>
             {beat.exclusiveSold && (
-              <span className="rounded-md bg-red-500/20 px-2 py-1 font-black text-red-300">
+              <span className="rounded-md bg-error/25 px-2 py-1 font-black text-error">
                 EXCLUSIVE: SOLD
               </span>
             )}
@@ -349,7 +352,7 @@ export function Feed({
           >
             <span
               className={`grid size-12 place-items-center rounded-full bg-black/30 backdrop-blur transition ${
-                soundOn ? 'text-lime-300' : 'text-white'
+                soundOn ? 'text-white' : 'text-white/70'
               }`}
             >
               {soundOn ? <Volume2 size={24} /> : <VolumeX size={24} />}
@@ -364,7 +367,7 @@ export function Feed({
             count={likeCount}
             onClick={onLike}
             active={liked}
-            activeClass="text-red-500"
+            activeClass="text-error"
           >
             <Heart size={24} fill={liked ? 'currentColor' : 'none'} />
           </ActionButton>
@@ -378,7 +381,7 @@ export function Feed({
             count={saveCount}
             onClick={onSave}
             active={saved}
-            activeClass="text-lime-300"
+            activeClass="text-white"
           >
             <Bookmark size={24} fill={saved ? 'currentColor' : 'none'} />
           </ActionButton>
@@ -388,7 +391,7 @@ export function Feed({
               <Share2 size={24} />
             </ActionButton>
             {copied && (
-              <span className="absolute -top-8 whitespace-nowrap rounded-full bg-lime-300 px-2.5 py-1 text-[10px] font-black text-black">
+              <span className="absolute -top-8 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-black">
                 Link copied!
               </span>
             )}
@@ -397,18 +400,18 @@ export function Feed({
           {isArtist && (
             <div className="mt-1 flex flex-col items-center gap-1.5">
               {beat.exclusiveSold ? (
-                <span className="rounded-full px-3 py-2 text-[10px] font-black text-red-300">
+                <span className="rounded-full px-3 py-2 text-[10px] font-black text-error">
                   SOLD
                 </span>
               ) : owned.includes('NON_EXCLUSIVE') ? (
                 <>
-                  <span className="rounded-full bg-lime-300/20 px-3 py-2 text-[10px] font-black text-lime-300">
+                  <span className="rounded-full bg-white/20 px-3 py-2 text-[10px] font-black text-white">
                     IN LIBRARY
                   </span>
                   {STUDIO_ENABLED && (
                     <Link
                       href={`/studio?beat=${beat.id}`}
-                      className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
+                      className="rounded-full bg-white/15 px-3 py-2 text-[10px] font-black text-white hover:bg-white/25"
                     >
                       OPEN IN STUDIO
                     </Link>
@@ -418,14 +421,14 @@ export function Feed({
                 <>
                   <button
                     onClick={onOffer}
-                    className="rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
+                    className="rounded-full bg-white px-3 py-2 text-[10px] font-black text-black"
                   >
                     GET FREE
                   </button>
                   {STUDIO_ENABLED && (
                     <Link
                       href={`/studio?beat=${beat.id}`}
-                      className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
+                      className="rounded-full bg-white/15 px-3 py-2 text-[10px] font-black text-white hover:bg-white/25"
                     >
                       OPEN IN STUDIO
                     </Link>
@@ -435,7 +438,7 @@ export function Feed({
                 <>
                   <button
                     onClick={onBuy}
-                    className="rounded-full bg-lime-300 px-3 py-2 text-[10px] font-black text-black"
+                    className="rounded-full bg-white px-3 py-2 text-[10px] font-black text-black"
                   >
                     BUY NOW
                   </button>

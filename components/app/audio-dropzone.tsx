@@ -32,9 +32,9 @@ export function AudioDropzone({
 
   if (file) {
     return (
-      <div className="rounded-2xl border border-white/20 bg-white/[.03] p-5">
+      <div className="rounded-2xl border border-border bg-surface p-5">
         <div className="flex items-start gap-3">
-          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-lime-300 text-black">
+          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand text-brand-foreground">
             <AudioLines size={20} />
           </div>
           <div className="min-w-0 flex-1">
@@ -48,7 +48,7 @@ export function AudioDropzone({
             <button
               onClick={onClear}
               aria-label="Remove audio file"
-              className="grid size-7 place-items-center rounded-full bg-white/10"
+              className="grid size-7 place-items-center rounded-full bg-surface-2"
             >
               <X size={14} />
             </button>
@@ -73,11 +73,11 @@ export function AudioDropzone({
         if (dropped && !disabled) onFile(dropped)
       }}
       className={`grid aspect-video w-full place-items-center rounded-2xl border border-dashed transition ${
-        dragging ? 'border-lime-300 bg-lime-300/10' : 'border-white/20 bg-white/[.03]'
-      } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-white/40'}`}
+        dragging ? 'border-brand bg-brand/10' : 'border-border bg-surface'
+      } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-border'}`}
     >
       <div className="pointer-events-none text-center">
-        <AudioLines className="mx-auto mb-3 text-lime-300" size={26} />
+        <AudioLines className="mx-auto mb-3 text-brand" size={26} />
         <p className="text-sm font-bold">Drop your audio here</p>
         <p className="mt-1 text-xs text-muted-foreground">MP3, WAV or AIFF · Max 250MB</p>
       </div>

@@ -446,8 +446,8 @@ export function Workspace({
     return (
       <StudioChrome user={user}>
         <div className="flex flex-1 items-center justify-center p-8">
-          <div className="max-w-md rounded-3xl border border-white/10 bg-white/[.03] p-10 text-center">
-            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white/[.04] text-lime-300">
+          <div className="max-w-md rounded-3xl border border-border bg-surface p-10 text-center">
+            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-surface text-brand">
               <MonitorX size={26} />
             </div>
             <h2 className="mt-5 text-2xl font-black">Best on a larger screen</h2>
@@ -457,7 +457,7 @@ export function Workspace({
             </p>
             <button
               onClick={onBack}
-              className="mt-6 rounded-xl bg-lime-300 px-5 py-3 text-sm font-black text-black hover:bg-lime-200"
+              className="mt-6 rounded-xl bg-brand px-5 py-3 text-sm font-black text-brand-foreground hover:bg-brand/90"
             >
               Back to Studio Home
             </button>
@@ -468,7 +468,9 @@ export function Workspace({
   }
 
   return (
-    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-background text-foreground">
+    // The recording workspace stays DARK in both modes (standard for
+    // recording software) — the `dark` class pins the theme tokens here.
+    <div className="dark flex h-screen min-h-0 flex-col overflow-hidden bg-background text-foreground">
       <TopBar
         name={project.name}
         saveStatus={saveStatus}
@@ -490,9 +492,9 @@ export function Workspace({
       )}
 
       {armPrompt && (
-        <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-rose-500/10 px-6 py-2 text-xs font-bold text-rose-200">
+        <div className="flex items-center justify-between gap-4 border-b border-border bg-error/10 px-6 py-2 text-xs font-bold text-error">
           <span>Record needs a destination: click the ● arm button on a track, then press R.</span>
-          <button onClick={() => setArmPrompt(false)} className="font-black text-rose-300">
+          <button onClick={() => setArmPrompt(false)} className="font-black text-error">
             Dismiss
           </button>
         </div>
@@ -615,32 +617,32 @@ function TrialBanner({
   onOffer: () => void
 }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-amber-400/20 bg-amber-400/[.07] px-6 py-2.5">
-      <CircleAlert size={16} className="shrink-0 text-amber-300" />
-      <p className="min-w-0 flex-1 text-xs font-bold text-amber-200">
+    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-warning/20 bg-warning/[.07] px-6 py-2.5">
+      <CircleAlert size={16} className="shrink-0 text-warning" />
+      <p className="min-w-0 flex-1 text-xs font-bold text-warning">
         Trial mode: This beat includes a PROD4ME audio tag. License it to remove the tag and export
         your song.
         {offerPending && (
-          <span className="mt-0.5 block text-[11px] font-semibold text-amber-200/80">
+          <span className="mt-0.5 block text-[11px] font-semibold text-warning/80">
             Offer pending — the producer hasn’t responded yet. This project stays in trial mode
             until your license is granted.
           </span>
         )}
         {isDemo && (
-          <span className="mt-0.5 block text-[11px] font-semibold text-amber-200/60">
+          <span className="mt-0.5 block text-[11px] font-semibold text-warning/60">
             Demo beat — purchase actions are illustrative only.
           </span>
         )}
       </p>
       <button
         onClick={onBuy}
-        className="shrink-0 rounded-lg bg-amber-300 px-4 py-1.5 text-xs font-black text-black hover:bg-amber-200"
+        className="shrink-0 rounded-lg bg-warning px-4 py-1.5 text-xs font-black text-brand-foreground hover:bg-amber-200"
       >
         Buy license
       </button>
       <button
         onClick={onOffer}
-        className="shrink-0 rounded-lg border border-amber-300/50 px-4 py-1.5 text-xs font-black text-amber-200 hover:bg-amber-300/10"
+        className="shrink-0 rounded-lg border border-warning/50 px-4 py-1.5 text-xs font-black text-warning hover:bg-warning/10"
       >
         Make offer
       </button>

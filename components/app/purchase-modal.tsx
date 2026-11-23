@@ -133,11 +133,11 @@ export function PurchaseModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#151515] p-6">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-scrim p-5">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Purchase options</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">Purchase options</p>
             <h2 className="mt-1 text-2xl font-black">{beat.title}</h2>
           </div>
           <button onClick={onClose} aria-label="Close">
@@ -152,7 +152,7 @@ export function PurchaseModal({
             <Button
               onClick={getFree}
               disabled={busy || owned.includes('NON_EXCLUSIVE')}
-              className="mt-4 w-full bg-lime-300 font-black text-black disabled:opacity-50"
+              className="mt-4 w-full bg-brand font-black text-brand-foreground disabled:opacity-50"
             >
               {busy ? <Loader2 className="mr-2 animate-spin" size={16} /> : null}
               {owned.includes('NON_EXCLUSIVE') ? 'In your library' : 'Get Free'}
@@ -188,12 +188,12 @@ export function PurchaseModal({
                         }}
                         aria-pressed={isActive}
                         className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
-                          isActive ? 'border-lime-300/60 bg-lime-300/[.08]' : 'border-white/10 bg-white/[.03]'
+                          isActive ? 'border-brand/60 bg-brand/[.08]' : 'border-border bg-surface'
                         }`}
                       >
                         <span>
                           <span className="block text-sm font-black">{LICENSE_LABEL[type]}</span>
-                          <span className={`text-xs ${owned.includes(type) ? 'text-lime-300' : 'text-muted-foreground'}`}>
+                          <span className={`text-xs ${owned.includes(type) ? 'text-brand' : 'text-muted-foreground'}`}>
                             {owned.includes(type) ? 'In your library' : 'One-time license'}
                           </span>
                         </span>
@@ -205,8 +205,8 @@ export function PurchaseModal({
             </div>
 
             {mode === 'buy' ? (
-              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[.03] p-4">
-                <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Confirm purchase</p>
+              <div className="mt-5 rounded-2xl border border-border bg-surface p-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-brand">Confirm purchase</p>
                 <div className="mt-3 flex justify-between text-sm">
                   <span className="text-muted-foreground">{LICENSE_LABEL[licenseType]} license</span>
                   <span className="font-black">{listing !== null ? formatMoney(listing) : '—'}</span>
@@ -214,7 +214,7 @@ export function PurchaseModal({
                 <Button
                   onClick={buyNow}
                   disabled={busy || listing === null || licenseOwned}
-                  className="mt-4 w-full bg-lime-300 font-black text-black disabled:opacity-50"
+                  className="mt-4 w-full bg-brand font-black text-brand-foreground disabled:opacity-50"
                 >
                   {busy ? (
                     <>
@@ -247,7 +247,7 @@ export function PurchaseModal({
                     disabled={busy}
                   />
                 </label>
-                {offerError ? <p className="text-xs font-semibold text-red-400">{offerError}</p> : null}
+                {offerError ? <p className="text-xs font-semibold text-error">{offerError}</p> : null}
                 <label className="text-xs font-bold text-muted-foreground">
                   Message to the producer (optional)
                   <textarea
@@ -261,7 +261,7 @@ export function PurchaseModal({
                 <Button
                   onClick={sendOffer}
                   disabled={busy || !amount || !!offerError}
-                  className="bg-lime-300 font-black text-black disabled:opacity-50"
+                  className="bg-brand font-black text-brand-foreground disabled:opacity-50"
                 >
                   {busy ? (
                     <>
@@ -283,8 +283,8 @@ export function PurchaseModal({
           </>
         )}
 
-        {errorText ? <p className="mt-4 text-sm font-semibold text-red-400">{errorText}</p> : null}
-        {info ? <p className="mt-4 text-sm font-semibold text-lime-300">{info}</p> : null}
+        {errorText ? <p className="mt-4 text-sm font-semibold text-error">{errorText}</p> : null}
+        {info ? <p className="mt-4 text-sm font-semibold text-brand">{info}</p> : null}
       </div>
     </div>
   )

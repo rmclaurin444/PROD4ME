@@ -47,11 +47,11 @@ export function TopBar({
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-4 border-b border-white/10 bg-black/40 px-5 py-3">
+    <div className="flex shrink-0 items-center gap-4 border-b border-border bg-background/60 px-5 py-3">
       <button
         onClick={onBack}
         aria-label="Back to Studio Home"
-        className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-bold text-muted-foreground hover:text-lime-300"
+        className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-bold text-muted-foreground hover:text-brand"
       >
         <ArrowLeft size={16} />
         Home
@@ -71,13 +71,13 @@ export function TopBar({
                 setEditing(false)
               }
             }}
-            className="w-64 rounded-lg border border-lime-300/60 bg-white/[.06] px-3 py-1.5 text-sm font-black outline-none"
+            className="w-64 rounded-lg border border-brand/60 bg-surface-2 px-3 py-1.5 text-sm font-black outline-none"
             autoFocus
           />
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="group flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-white/5"
+            className="group flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-surface-2/50"
           >
             <span className="truncate text-lg font-black">{name}</span>
             <Pencil size={13} className="shrink-0 text-muted-foreground opacity-60 group-hover:opacity-100" />
@@ -87,7 +87,7 @@ export function TopBar({
 
       <span
         className={`flex items-center gap-1.5 text-xs font-bold ${
-          saveStatus === 'unsaved' ? 'text-amber-300' : saveStatus === 'saving' ? 'text-muted-foreground' : 'text-lime-300'
+          saveStatus === 'unsaved' ? 'text-warning' : saveStatus === 'saving' ? 'text-muted-foreground' : 'text-brand'
         }`}
       >
         {saveStatus === 'saved' ? <Check size={13} /> : saveStatus === 'saving' ? <Loader2 size={13} className="animate-spin" /> : null}
@@ -95,14 +95,14 @@ export function TopBar({
       </span>
 
       {access === 'trial' && (
-        <span className="flex items-center gap-1.5 rounded-full bg-amber-400/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-300">
+        <span className="flex items-center gap-1.5 rounded-full bg-warning/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-warning">
           {offerPending ? <Lock size={11} /> : null}
           Trial
         </span>
       )}
       {access !== null && access !== 'trial' && <AccessBadge access={access} />}
       {access === null && (
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+        <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
           No beat
         </span>
       )}
@@ -116,8 +116,8 @@ export function TopBar({
         aria-disabled={!canExport}
         className={`ml-auto rounded-xl px-5 py-2 text-sm font-black ${
           canExport
-            ? 'bg-lime-300 text-black hover:bg-lime-200'
-            : 'cursor-not-allowed bg-white/5 text-muted-foreground hover:bg-white/10'
+            ? 'bg-brand text-brand-foreground hover:bg-brand/90'
+            : 'cursor-not-allowed bg-surface-2/50 text-muted-foreground hover:bg-surface-2'
         }`}
       >
         {canExport ? 'Export' : <span className="flex items-center gap-1.5"><Lock size={13} /> Export</span>}

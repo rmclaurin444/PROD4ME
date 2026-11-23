@@ -10,17 +10,17 @@ function licenseLabel(licenseType: string) {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  PENDING: 'bg-amber-400/15 text-amber-300',
-  COUNTERED: 'bg-sky-400/15 text-sky-300',
-  AWAITING_PAYMENT: 'bg-lime-300/15 text-lime-300',
-  PAID: 'bg-emerald-400/15 text-emerald-300',
-  EXPIRED: 'bg-red-400/15 text-red-300',
-  DECLINED: 'bg-white/10 text-muted-foreground',
+  PENDING: 'bg-warning/15 text-warning',
+  COUNTERED: 'bg-surface-2 text-foreground',
+  AWAITING_PAYMENT: 'bg-brand/15 text-brand',
+  PAID: 'bg-success/15 text-success',
+  EXPIRED: 'bg-error/15 text-error',
+  DECLINED: 'bg-surface-2 text-muted-foreground',
 }
 
 function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${STATUS_STYLES[status] ?? 'bg-white/10'}`}>
+    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${STATUS_STYLES[status] ?? 'bg-surface-2'}`}>
       {status.replaceAll('_', ' ')}
     </span>
   )
@@ -111,7 +111,7 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
       )}
 
       {offers && offers.length === 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/[.03] p-6 text-center">
+        <div className="rounded-2xl border border-border bg-surface p-6 text-center">
           <p className="font-black">{isArtist ? 'No offers yet' : 'No incoming offers yet'}</p>
           <p className="mt-2 text-sm text-muted-foreground">
             {isArtist
@@ -130,7 +130,7 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
           <div
             key={offer.id}
             className={`rounded-2xl border p-4 ${
-              waiting ? 'border-lime-300/20 bg-lime-300/[.05]' : 'border-white/10 bg-white/[.03]'
+              waiting ? 'border-brand/20 bg-brand/[.05]' : 'border-border bg-surface'
             }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -173,15 +173,15 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
             </div>
 
             {offer.message && (
-              <p className="mt-2 rounded-xl bg-white/[.04] px-3 py-2 text-sm text-white/80">“{offer.message}”</p>
+              <p className="mt-2 rounded-xl bg-surface px-3 py-2 text-sm text-foreground/80">“{offer.message}”</p>
             )}
             {offer.counterMessage && (
-              <p className="mt-2 rounded-xl bg-sky-400/10 px-3 py-2 text-sm text-sky-100">
+              <p className="mt-2 rounded-xl bg-surface-2 px-3 py-2 text-sm text-foreground/90">
                 “{offer.counterMessage}”
               </p>
             )}
             {offer.status === 'PAID' && (
-              <p className="mt-2 text-xs font-bold text-emerald-300">Paid — license granted.</p>
+              <p className="mt-2 text-xs font-bold text-success">Paid — license granted.</p>
             )}
 
             {offer.status === 'PENDING' && isProducer && (
@@ -189,7 +189,7 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
                 <button
                   onClick={() => act(offer.id, 'accept')}
                   disabled={busyId === offer.id}
-                  className="rounded-full bg-lime-300 px-4 py-1.5 text-[10px] font-black text-black disabled:opacity-40"
+                  className="rounded-full bg-brand px-4 py-1.5 text-[10px] font-black text-brand-foreground disabled:opacity-40"
                 >
                   ACCEPT
                 </button>
@@ -200,14 +200,14 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
                     setCounterMessage('')
                   }}
                   disabled={busyId === offer.id}
-                  className="rounded-full border border-white/20 px-4 py-1.5 text-[10px] font-black disabled:opacity-40"
+                  className="rounded-full border border-border px-4 py-1.5 text-[10px] font-black disabled:opacity-40"
                 >
                   COUNTER
                 </button>
                 <button
                   onClick={() => act(offer.id, 'decline')}
                   disabled={busyId === offer.id}
-                  className="rounded-full border border-red-400/40 px-4 py-1.5 text-[10px] font-black text-red-300 disabled:opacity-40"
+                  className="rounded-full border border-red-400/40 px-4 py-1.5 text-[10px] font-black text-error disabled:opacity-40"
                 >
                   DECLINE
                 </button>
@@ -215,7 +215,7 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
             )}
 
             {counterFor === offer.id && isProducer && offer.status === 'PENDING' && (
-              <div className="mt-3 rounded-2xl border border-white/10 bg-white/[.04] p-3">
+              <div className="mt-3 rounded-2xl border border-border bg-surface p-3">
                 <label className="text-xs font-bold text-muted-foreground">
                   Counter amount
                   <input
@@ -227,7 +227,7 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
                     disabled={busyId === offer.id}
                   />
                 </label>
-                {counterError ? <p className="mt-1 text-xs font-semibold text-red-400">{counterError}</p> : null}
+                {counterError ? <p className="mt-1 text-xs font-semibold text-error">{counterError}</p> : null}
                 <label className="mt-2 block text-xs font-bold text-muted-foreground">
                   Message (optional)
                   <input
@@ -247,14 +247,14 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
                       })
                     }}
                     disabled={busyId === offer.id || !counterAmount || !!counterError}
-                    className="rounded-full bg-lime-300 px-4 py-1.5 text-[10px] font-black text-black disabled:opacity-40"
+                    className="rounded-full bg-brand px-4 py-1.5 text-[10px] font-black text-brand-foreground disabled:opacity-40"
                   >
                     Send counter
                   </button>
                   <button
                     onClick={() => setCounterFor(null)}
                     disabled={busyId === offer.id}
-                    className="rounded-full border border-white/20 px-4 py-1.5 text-[10px] font-black disabled:opacity-40"
+                    className="rounded-full border border-border px-4 py-1.5 text-[10px] font-black disabled:opacity-40"
                   >
                     Cancel
                   </button>
@@ -267,14 +267,14 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
                 <button
                   onClick={() => act(offer.id, 'accept-counter')}
                   disabled={busyId === offer.id}
-                  className="rounded-full bg-lime-300 px-4 py-1.5 text-[10px] font-black text-black disabled:opacity-40"
+                  className="rounded-full bg-brand px-4 py-1.5 text-[10px] font-black text-brand-foreground disabled:opacity-40"
                 >
                   ACCEPT COUNTER
                 </button>
                 <button
                   onClick={() => act(offer.id, 'decline')}
                   disabled={busyId === offer.id}
-                  className="rounded-full border border-white/20 px-4 py-1.5 text-[10px] font-black disabled:opacity-40"
+                  className="rounded-full border border-border px-4 py-1.5 text-[10px] font-black disabled:opacity-40"
                 >
                   DECLINE
                 </button>
@@ -286,7 +286,7 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
                 <button
                   onClick={() => payNow(offer)}
                   disabled={busyId === offer.id}
-                  className="rounded-full bg-lime-300 px-4 py-1.5 text-[10px] font-black text-black disabled:opacity-40"
+                  className="rounded-full bg-brand px-4 py-1.5 text-[10px] font-black text-brand-foreground disabled:opacity-40"
                 >
                   {busyId === offer.id ? 'OPENING CHECKOUT…' : 'PAY NOW'}
                 </button>
@@ -305,12 +305,12 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
             {offer.status === 'AWAITING_PAYMENT' && isProducer === true && (
               <p className="mt-2 text-[11px] text-muted-foreground">Waiting for the artist to pay.</p>
             )}
-            {expired && <p className="mt-2 text-xs font-bold text-red-300">No longer active.</p>}
+            {expired && <p className="mt-2 text-xs font-bold text-error">No longer active.</p>}
           </div>
         )
       })}
 
-      {error && <p className="text-sm font-semibold text-red-400">{error}</p>}
+      {error && <p className="text-sm font-semibold text-error">{error}</p>}
     </div>
   )
 }

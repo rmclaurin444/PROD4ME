@@ -24,14 +24,14 @@ export function LibraryPanel({
 
   return (
     <div
-      className={`flex shrink-0 flex-col overflow-hidden border-r border-white/10 bg-black/20 transition-all ${
+      className={`flex shrink-0 flex-col overflow-hidden border-r border-border bg-surface transition-all ${
         open ? 'w-72' : 'w-10'
       }`}
     >
       <button
         onClick={onToggle}
         aria-label={open ? 'Collapse library' : 'Expand library'}
-        className="flex w-full items-center justify-center gap-1 border-b border-white/10 py-2 text-xs font-black text-muted-foreground hover:text-lime-300"
+        className="flex w-full items-center justify-center gap-1 border-b border-border py-2 text-xs font-black text-muted-foreground hover:text-brand"
       >
         {open ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
         {open ? 'Collapse' : 'Library'}
@@ -39,7 +39,7 @@ export function LibraryPanel({
 
       {open && (
         <>
-          <div className="flex border-b border-white/10">
+          <div className="flex border-b border-border">
             {(
               [
                 ['beats', 'My Beats', <Music2 key="i" size={13} />],
@@ -50,7 +50,7 @@ export function LibraryPanel({
                 key={id}
                 onClick={() => setTab(id)}
                 className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[11px] font-black uppercase tracking-wider ${
-                  tab === id ? 'border-b-2 border-lime-300 text-lime-300' : 'text-muted-foreground hover:text-foreground'
+                  tab === id ? 'border-b-2 border-brand text-brand' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {icon}
@@ -82,17 +82,17 @@ export function LibraryPanel({
                       e.dataTransfer.effectAllowed = 'copy'
                     }}
                     onDoubleClick={() => onBeatDoubleClick(beat.id)}
-                    className="flex cursor-grab items-center gap-2.5 rounded-xl border border-white/5 bg-white/[.03] px-3 py-2.5 hover:border-lime-300/40"
+                    className="flex cursor-grab items-center gap-2.5 rounded-xl border border-border/50 bg-surface px-3 py-2.5 hover:border-brand/40"
                     title="Drag into the timeline, or double-click to load"
                   >
-                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-lime-300/15 text-lime-300">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand/15 text-brand">
                       <Music2 size={14} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-black">
                         {beat.title}
                         {beat.isDemo && (
-                          <span className="ml-1.5 rounded bg-white/10 px-1 py-0.5 text-[9px] font-bold text-muted-foreground">
+                          <span className="ml-1.5 rounded bg-surface-2 px-1 py-0.5 text-[9px] font-bold text-muted-foreground">
                             Demo
                           </span>
                         )}
@@ -119,9 +119,9 @@ export function LibraryPanel({
                       e.dataTransfer.setData('text/plain', item.name)
                       e.dataTransfer.effectAllowed = 'copy'
                     }}
-                    className="flex cursor-grab items-center gap-2.5 rounded-xl border border-white/5 bg-white/[.03] px-3 py-2.5 hover:border-lime-300/40"
+                    className="flex cursor-grab items-center gap-2.5 rounded-xl border border-border/50 bg-surface px-3 py-2.5 hover:border-brand/40"
                   >
-                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-sky-400/15 text-sky-300">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-foreground">
                       <FileAudio size={14} />
                     </span>
                     <span className="min-w-0 flex-1">

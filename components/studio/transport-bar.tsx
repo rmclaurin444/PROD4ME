@@ -24,17 +24,17 @@ function TransportButton({
 }) {
   const activeClass =
     tone === 'red'
-      ? 'bg-rose-500 text-white'
+      ? 'bg-error text-foreground'
       : tone === 'lime'
-        ? 'bg-lime-300 text-black'
-        : 'bg-white/15 text-white'
+        ? 'bg-brand text-brand-foreground'
+        : 'bg-surface-2 text-foreground'
   return (
     <button
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`grid size-9 place-items-center rounded-lg border border-white/10 ${
-        active ? activeClass : 'bg-white/[.04] text-foreground hover:bg-white/10'
+      className={`grid size-9 place-items-center rounded-lg border border-border ${
+        active ? activeClass : 'bg-surface text-foreground hover:bg-surface-2'
       }`}
     >
       {children}
@@ -78,7 +78,7 @@ export function TransportBar({
   onSetTimeSignature: (ts: string) => void
 }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/10 bg-white/[.02] px-5 py-2.5">
+    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-surface/30 px-5 py-2.5">
       <div className="flex items-center gap-1.5">
         <TransportButton
           onClick={onTogglePlay}
@@ -106,7 +106,7 @@ export function TransportBar({
           <Circle
             size={14}
             fill={transport === 'recording' ? 'currentColor' : 'none'}
-            className={transport === 'recording' ? 'animate-pulse' : 'text-rose-400'}
+            className={transport === 'recording' ? 'animate-pulse' : 'text-error'}
           />
         </TransportButton>
       </div>
@@ -122,13 +122,13 @@ export function TransportBar({
           {metronome && (
             <span
               key={metronomeTick}
-              className="absolute -right-0.5 -top-0.5 size-2 animate-ping rounded-full bg-lime-300"
+              className="absolute -right-0.5 -top-0.5 size-2 animate-ping rounded-full bg-brand"
             />
           )}
         </div>
       </div>
 
-      <div className="mx-1 h-6 w-px bg-white/10" />
+      <div className="mx-1 h-6 w-px bg-surface-2" />
 
       <label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
         BPM
@@ -138,7 +138,7 @@ export function TransportBar({
           max={300}
           value={bpm}
           onChange={e => onSetBpm(Number(e.target.value))}
-          className="w-16 rounded-lg border border-white/10 bg-white/[.04] px-2 py-1.5 text-center text-xs font-black outline-none focus:border-lime-300/60"
+          className="w-16 rounded-lg border border-border bg-surface px-2 py-1.5 text-center text-xs font-black outline-none focus:border-brand/60"
         />
       </label>
 
@@ -147,7 +147,7 @@ export function TransportBar({
         <select
           value={musicalKey}
           onChange={e => onSetKey(e.target.value)}
-          className="rounded-lg border border-white/10 bg-white/[.04] px-2 py-1.5 text-xs font-black outline-none focus:border-lime-300/60 [&>option]:bg-[#151515]"
+          className="rounded-lg border border-border bg-surface px-2 py-1.5 text-xs font-black outline-none focus:border-brand/60 [&>option]:bg-surface"
         >
           {KEY_OPTIONS.map(k => (
             <option key={k} value={k}>
@@ -162,7 +162,7 @@ export function TransportBar({
         <select
           value={timeSignature}
           onChange={e => onSetTimeSignature(e.target.value)}
-          className="rounded-lg border border-white/10 bg-white/[.04] px-2 py-1.5 text-xs font-black outline-none focus:border-lime-300/60 [&>option]:bg-[#151515]"
+          className="rounded-lg border border-border bg-surface px-2 py-1.5 text-xs font-black outline-none focus:border-brand/60 [&>option]:bg-surface"
         >
           {TIME_SIGNATURES.map(ts => (
             <option key={ts} value={ts}>
@@ -172,8 +172,8 @@ export function TransportBar({
         </select>
       </label>
 
-      <div className="ml-auto flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-4 py-1.5 font-mono text-sm tabular-nums">
-        <span className={transport === 'recording' ? 'text-rose-400' : 'text-lime-300'}>
+      <div className="ml-auto flex items-center gap-3 rounded-xl border border-border bg-background/60 px-4 py-1.5 font-mono text-sm tabular-nums">
+        <span className={transport === 'recording' ? 'text-error' : 'text-brand'}>
           {formatTimecode(playhead)}
         </span>
         <span className="text-muted-foreground">·</span>

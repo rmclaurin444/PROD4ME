@@ -161,8 +161,8 @@ export function UploadView() {
   if (done) {
     return (
       <div className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto px-5 pb-28 pt-24 md:px-12">
-        <div className="rounded-3xl border border-lime-300/30 bg-lime-300/[.06] p-8 text-center">
-          <div className="mx-auto grid size-14 place-items-center rounded-full bg-lime-300 text-black">
+        <div className="rounded-3xl border border-brand/30 bg-brand/[.06] p-8 text-center">
+          <div className="mx-auto grid size-14 place-items-center rounded-full bg-brand text-brand-foreground">
             <Check size={28} />
           </div>
           <h1 className="mt-5 text-2xl font-black">Beat published</h1>
@@ -170,7 +170,7 @@ export function UploadView() {
             Your beat is now discoverable in the feed.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={reset} className="bg-lime-300 font-black text-black">
+            <Button onClick={reset} className="bg-brand font-black text-brand-foreground">
               Upload another
             </Button>
           </div>
@@ -181,7 +181,7 @@ export function UploadView() {
 
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 overflow-y-auto px-5 pb-28 pt-24 md:px-12">
-      <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Creator studio</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-brand">Creator studio</p>
       <h1 className="mt-2 text-4xl font-black">Upload a new beat</h1>
 
       <div className="mt-8 grid gap-5 md:grid-cols-2">
@@ -254,7 +254,7 @@ export function UploadView() {
 
           <label className="text-xs font-bold text-muted-foreground">
             Non-exclusive price{' '}
-            <span className="ml-2 rounded-full bg-lime-300 px-2 py-1 text-[10px] text-black">
+            <span className="ml-2 rounded-full bg-brand px-2 py-1 text-[10px] text-brand-foreground">
               {price === 0 ? 'FREE' : `$${price}`}
             </span>
             <input
@@ -265,7 +265,7 @@ export function UploadView() {
               step="5"
               value={price}
               onChange={e => setPrice(Number(e.target.value))}
-              className="mt-4 w-full accent-lime-300"
+              className="mt-4 w-full accent-brand"
               disabled={busy}
             />
             <span className="mt-1 block text-xs text-muted-foreground">
@@ -275,7 +275,7 @@ export function UploadView() {
 
           <label className="text-xs font-bold text-muted-foreground">
             Exclusive license price{' '}
-            <span className="ml-2 rounded-full bg-white/10 px-2 py-1 text-[10px]">
+            <span className="ml-2 rounded-full bg-surface-2 px-2 py-1 text-[10px]">
               {exclusivePrice.trim() === '' ? 'NOT OFFERED' : `$${Number(exclusivePrice)}`}
             </span>
             <input
@@ -294,7 +294,7 @@ export function UploadView() {
             <span className="mt-1 block text-xs text-muted-foreground">
               Blank means the exclusive license is not offered. This license sells once, then the beat closes.
             </span>
-            <span className="mt-1 block min-h-4 text-xs font-semibold text-red-400">
+            <span className="mt-1 block min-h-4 text-xs font-semibold text-error">
               {validateExclusivePrice(exclusivePrice, price)}
             </span>
           </label>
@@ -305,21 +305,21 @@ export function UploadView() {
                 <span>{stage}</span>
                 <span>{progress}%</span>
               </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2">
                 <div
-                  className="h-full bg-lime-300 transition-all"
+                  className="h-full bg-brand transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>
             </div>
           )}
 
-          {error && <p className="text-sm font-semibold text-red-400">{error}</p>}
+          {error && <p className="text-sm font-semibold text-error">{error}</p>}
 
           <Button
             onClick={handlePublish}
             disabled={busy}
-            className="bg-lime-300 font-black text-black disabled:opacity-50"
+            className="bg-brand font-black text-brand-foreground disabled:opacity-50"
           >
             {busy ? (
               <>

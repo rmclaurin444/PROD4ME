@@ -51,7 +51,7 @@ export function InboxView({
             <ChevronLeft size={18} /> All messages
           </button>
 
-          <div className="flex items-center gap-3 border-b border-white/10 pb-5">
+          <div className="flex items-center gap-3 border-b border-border pb-5">
             <Avatar text={conversation.avatar} />
             <div>
               <p className="font-black">{conversation.name}</p>
@@ -65,8 +65,8 @@ export function InboxView({
                 key={`${item.timestamp}-${i}`}
                 className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
                   item.sender === 'me'
-                    ? 'self-end rounded-br-sm bg-lime-300 font-semibold text-black'
-                    : 'self-start rounded-bl-sm bg-white/10'
+                    ? 'self-end rounded-br-sm bg-brand font-semibold text-brand-foreground'
+                    : 'self-start rounded-bl-sm bg-surface-2'
                 }`}
               >
                 {item.text}
@@ -84,7 +84,7 @@ export function InboxView({
               className="input"
               placeholder="Write a message..."
             />
-            <Button onClick={sendMessage} className="bg-lime-300 text-black">
+            <Button onClick={sendMessage} className="bg-brand text-brand-foreground">
               <Send />
             </Button>
           </div>
@@ -93,21 +93,21 @@ export function InboxView({
         <>
           <div className="flex items-end justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Your activity</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-brand">Your activity</p>
               <h1 className="mt-2 text-4xl font-black">Inbox</h1>
             </div>
             {tab === 'notifications' && unread > 0 && (
-              <button onClick={() => setUnread(0)} className="text-xs font-bold text-lime-300">
+              <button onClick={() => setUnread(0)} className="text-xs font-bold text-brand">
                 Mark all read
               </button>
             )}
           </div>
 
-          <div className="mt-8 flex gap-2 rounded-xl bg-white/[.04] p-1">
+          <div className="mt-8 flex gap-2 rounded-xl bg-surface p-1">
             <button
               onClick={() => setTab('offers')}
               className={`flex-1 rounded-lg px-4 py-3 text-sm font-black ${
-                tab === 'offers' ? 'bg-lime-300 text-black' : 'text-muted-foreground'
+                tab === 'offers' ? 'bg-brand text-brand-foreground' : 'text-muted-foreground'
               }`}
             >
               <Zap className="mr-2 inline" size={16} /> Offers
@@ -115,16 +115,16 @@ export function InboxView({
             <button
               onClick={() => setTab('notifications')}
               className={`flex-1 rounded-lg px-4 py-3 text-sm font-black ${
-                tab === 'notifications' ? 'bg-lime-300 text-black' : 'text-muted-foreground'
+                tab === 'notifications' ? 'bg-brand text-brand-foreground' : 'text-muted-foreground'
               }`}
             >
               <Bell className="mr-2 inline" size={16} /> Notifications{' '}
-              {unread > 0 && <span className="ml-1 rounded-full bg-black/20 px-2 py-0.5 text-xs">{unread}</span>}
+              {unread > 0 && <span className="ml-1 rounded-full bg-surface px-2 py-0.5 text-xs">{unread}</span>}
             </button>
             <button
               onClick={() => setTab('messages')}
               className={`flex-1 rounded-lg px-4 py-3 text-sm font-black ${
-                tab === 'messages' ? 'bg-lime-300 text-black' : 'text-muted-foreground'
+                tab === 'messages' ? 'bg-brand text-brand-foreground' : 'text-muted-foreground'
               }`}
             >
               <MessageCircle className="mr-2 inline" size={16} /> Messages
@@ -139,15 +139,15 @@ export function InboxView({
                 <div
                   key={i}
                   className={`flex items-center gap-4 rounded-2xl border p-4 ${
-                    n.fresh && unread ? 'border-lime-300/20 bg-lime-300/[.05]' : 'border-white/10 bg-white/[.03]'
+                    n.fresh && unread ? 'border-brand/20 bg-brand/[.05]' : 'border-border bg-surface'
                   }`}
                 >
-                  <n.icon className="shrink-0 text-lime-300" size={20} />
+                  <n.icon className="shrink-0 text-brand" size={20} />
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{n.text}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{n.time}</p>
                   </div>
-                  {n.fresh && unread > 0 && <span className="size-2 rounded-full bg-lime-300" />}
+                  {n.fresh && unread > 0 && <span className="size-2 rounded-full bg-brand" />}
                 </div>
               ))}
             </div>
@@ -157,7 +157,7 @@ export function InboxView({
                 <button
                   key={m.name}
                   onClick={() => setActiveConversation(i)}
-                  className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[.03] p-4 text-left hover:bg-white/[.06]"
+                  className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-4 text-left hover:bg-surface-2"
                 >
                   <Avatar text={m.avatar} />
                   <div className="min-w-0 flex-1">
@@ -168,7 +168,7 @@ export function InboxView({
                     <p className="mt-1 truncate text-sm text-muted-foreground">{m.preview}</p>
                   </div>
                   {m.unread > 0 && (
-                    <span className="grid size-6 place-items-center rounded-full bg-lime-300 text-xs font-black text-black">
+                    <span className="grid size-6 place-items-center rounded-full bg-brand text-xs font-black text-brand-foreground">
                       {m.unread}
                     </span>
                   )}
@@ -192,7 +192,7 @@ export function UserProfile({ user, count, following, onFollow, onMessage, onBac
       <div className="flex items-center gap-5">
         <Avatar text={user.avatar} size="size-20" />
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-lime-300">{user.role}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-brand">{user.role}</p>
           <h1 className="mt-1 text-4xl font-black">{user.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{user.bio}</p>
           <p className="mt-3 text-xs font-bold text-muted-foreground">
@@ -202,10 +202,10 @@ export function UserProfile({ user, count, following, onFollow, onMessage, onBac
       </div>
 
       <div className="mt-8 flex gap-3">
-        <Button onClick={onFollow} className={following ? 'bg-white/10 text-white' : 'bg-lime-300 text-black'}>
+        <Button onClick={onFollow} className={following ? 'bg-surface-2 text-foreground' : 'bg-brand text-brand-foreground'}>
           {following ? 'Following' : 'Follow'}
         </Button>
-        <Button onClick={onMessage} variant="outline" className="border-white/20">
+        <Button onClick={onMessage} variant="outline" className="border-border">
           <MessageCircle data-icon="inline-start" /> Message
         </Button>
       </div>
@@ -218,12 +218,12 @@ export function UserProfile({ user, count, following, onFollow, onMessage, onBac
           {beats.map((beat: any) => (
             <div
               key={beat.id}
-              className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-3"
+              className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3"
             >
               {beat.artUrl ? (
                 <img src={beat.artUrl} alt="" className="size-14 rounded-xl object-cover" />
               ) : (
-                <div className="size-14 shrink-0 rounded-xl bg-gradient-to-br from-lime-300/40 to-emerald-500/30" />
+                <div className="size-14 shrink-0 rounded-xl bg-surface-2" />
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-black">{beat.title}</p>
@@ -234,7 +234,7 @@ export function UserProfile({ user, count, following, onFollow, onMessage, onBac
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {beat.price === 0 ? (
-                    <span className="rounded-full bg-lime-300 px-2 py-0.5 font-black text-black">FREE</span>
+                    <span className="rounded-full bg-brand px-2 py-0.5 font-black text-brand-foreground">FREE</span>
                   ) : (
                     `from $${beat.price}`
                   )}{' '}

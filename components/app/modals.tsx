@@ -7,11 +7,11 @@ import { Avatar } from '@/components/app/ui'
 import type { ShapedBeat } from '@/lib/beats'
 export function Comments({ beat, comments, draft, setDraft, onPost, onClose }: any) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-5 md:items-center">
-      <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#151515] p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-5 md:items-center">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-surface p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Beat comments</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">Beat comments</p>
             <h2 className="mt-1 text-2xl font-black">{beat.title}</h2>
           </div>
           <button onClick={onClose} aria-label="Close comments">
@@ -23,9 +23,9 @@ export function Comments({ beat, comments, draft, setDraft, onPost, onClose }: a
           {comments.map((comment: any, i: number) => (
             <div key={`${comment.name}-${i}`} className="flex gap-3">
               <Avatar text={comment.avatar} />
-              <div className="rounded-2xl bg-white/10 px-4 py-3">
+              <div className="rounded-2xl bg-surface-2 px-4 py-3">
                 <p className="text-xs font-black">{comment.name}</p>
-                <p className="mt-1 text-sm text-white/80">{comment.text}</p>
+                <p className="mt-1 text-sm text-foreground/80">{comment.text}</p>
               </div>
             </div>
           ))}
@@ -42,7 +42,7 @@ export function Comments({ beat, comments, draft, setDraft, onPost, onClose }: a
             placeholder="Add a comment..."
             aria-label="Add a comment"
           />
-          <Button onClick={onPost} className="bg-lime-300 text-black">
+          <Button onClick={onPost} className="bg-brand text-brand-foreground">
             <Send />
           </Button>
         </div>
@@ -68,11 +68,11 @@ export function PostTrack({
   const beat = beats.find(b => b.id === choice) ?? beats[0]
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5">
-      <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#151515] p-6">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-scrim p-5">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-surface p-6">
         <div className="flex justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Artist mode</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">Artist mode</p>
             <h2 className="mt-1 text-2xl font-black">Post Your Track</h2>
           </div>
           <button onClick={onClose} aria-label="Close">
@@ -118,7 +118,7 @@ export function PostTrack({
         <Button
           disabled={!title || !url || !beat}
           onClick={() => onPublish({ title, url, beat: beat.title, art: beat.artUrl })}
-          className="mt-6 w-full bg-lime-300 font-black text-black"
+          className="mt-6 w-full bg-brand font-black text-brand-foreground"
         >
           <Check data-icon="inline-start" /> Publish to profile
         </Button>

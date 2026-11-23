@@ -24,23 +24,23 @@ export function Dashboard({
 
   return (
     <div className="mx-auto w-full max-w-5xl overflow-y-auto px-5 pb-28 pt-24 md:px-12">
-      <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Producer dashboard</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-brand">Producer dashboard</p>
       <h1 className="mt-2 text-4xl font-black">Good morning, {firstName}.</h1>
 
       <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[.03] p-4">
+        <div className="rounded-2xl border border-border bg-surface p-4">
           <p className="text-xs font-bold text-muted-foreground">Total plays</p>
           <p className="mt-2 text-2xl font-black">{totalPlays.toLocaleString()}</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[.03] p-4">
+        <div className="rounded-2xl border border-border bg-surface p-4">
           <p className="text-xs font-bold text-muted-foreground">Likes</p>
           <p className="mt-2 text-2xl font-black">{totalLikes.toLocaleString()}</p>
         </div>
-        <div className="rounded-2xl border border-lime-300/20 bg-lime-300/[.06] p-4">
+        <div className="rounded-2xl border border-brand/20 bg-brand/[.06] p-4">
           <p className="text-xs font-bold text-muted-foreground">Open offers</p>
           <p className="mt-2 text-2xl font-black">{openOffers}</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[.03] p-4">
+        <div className="rounded-2xl border border-border bg-surface p-4">
           <p className="text-xs font-bold text-muted-foreground">Licensed to artists</p>
           <p className="mt-2 text-2xl font-black">{licensedCount}</p>
         </div>
@@ -51,14 +51,14 @@ export function Dashboard({
         {beats.map(b => (
           <div
             key={b.id}
-            className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-3"
+            className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-3"
           >
             <div className="min-w-0 flex-1">
               <p className="font-black">{b.title}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {b.price === 0 ? (
                   <>
-                    <span className="rounded-full bg-lime-300 px-2 py-0.5 font-black text-black">FREE</span>
+                    <span className="rounded-full bg-brand px-2 py-0.5 font-black text-brand-foreground">FREE</span>
                   </>
                 ) : (
                   `${'$'}${b.price}`
@@ -75,7 +75,7 @@ export function Dashboard({
             <button
               onClick={() => onEditPrice(b)}
               aria-label={`Set pricing for ${b.title}`}
-              className="flex items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 text-[10px] font-black"
+              className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-[10px] font-black"
             >
               <BarChart3 size={12} /> {b.exclusiveSold ? 'EXCLUSIVE: SOLD' : b.exclusivePriceCents !== null ? 'EDIT EXCLUSIVE PRICE' : 'SET EXCLUSIVE PRICE'}
               <Pencil size={12} />
@@ -84,7 +84,7 @@ export function Dashboard({
         ))}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-lime-300/20 bg-lime-300/[.06] p-5">
+      <div className="mt-8 rounded-2xl border border-brand/20 bg-brand/[.06] p-5">
         <TagPills tags={['dark trap', 'melodic']} onTag={() => {}} />
         <p className="mt-4 text-lg font-black">Your #darktrap tagged beats get 2x more plays.</p>
       </div>

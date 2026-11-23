@@ -47,10 +47,10 @@ export function CheckoutSuccessView({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-5 text-center">
-      <div className="w-full rounded-3xl border border-white/10 bg-[#151515] p-8">
+      <div className="w-full rounded-3xl border border-border bg-surface p-8">
         {status === 'pending' && (
           <>
-            <Loader2 className="mx-auto animate-spin text-lime-300" size={40} />
+            <Loader2 className="mx-auto animate-spin text-brand" size={40} />
             <h1 className="mt-5 text-2xl font-black">Finishing up…</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Waiting for payment confirmation. This only takes a moment.
@@ -59,14 +59,14 @@ export function CheckoutSuccessView({ sessionId }: { sessionId: string }) {
         )}
         {status === 'succeeded' && (
           <>
-            <CheckCircle2 className="mx-auto text-lime-300" size={40} />
+            <CheckCircle2 className="mx-auto text-brand" size={40} />
             <h1 className="mt-5 text-2xl font-black">Payment complete</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Your license is granted and the beat is now in your library.
             </p>
             <a
               href="/"
-              className="mt-6 inline-block rounded-xl bg-lime-300 px-5 py-2.5 text-sm font-black text-black"
+              className="mt-6 inline-block rounded-xl bg-brand px-5 py-2.5 text-sm font-black text-brand-foreground"
             >
               Back to the feed
             </a>
@@ -74,7 +74,7 @@ export function CheckoutSuccessView({ sessionId }: { sessionId: string }) {
         )}
         {status === 'failed' && (
           <>
-            <XCircle className="mx-auto text-red-400" size={40} />
+            <XCircle className="mx-auto text-error" size={40} />
             <h1 className="mt-5 text-2xl font-black">Payment not confirmed yet</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               The webhook hasn&apos;t confirmed this payment. If you completed checkout, your license
@@ -82,7 +82,7 @@ export function CheckoutSuccessView({ sessionId }: { sessionId: string }) {
             </p>
             <a
               href="/"
-              className="mt-6 inline-block rounded-xl border border-white/20 px-5 py-2.5 text-sm font-black"
+              className="mt-6 inline-block rounded-xl border border-border px-5 py-2.5 text-sm font-black"
             >
               Back to the feed
             </a>

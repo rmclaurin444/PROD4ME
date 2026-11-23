@@ -4,6 +4,12 @@ import { useRef } from 'react'
 
 const BAR_COUNT = 128
 
+/**
+ * Waveform seek bar. Currently only rendered inside the feed, on top of beat
+ * artwork — so it keeps the artwork-overlay treatment (white over the dark
+ * scrim) in BOTH modes. If it is ever used outside artwork, switch played
+ * bars to `bg-brand` and unplayed to `bg-foreground/20`.
+ */
 export function Waveform({
   peaks,
   progress,
@@ -59,6 +65,7 @@ export function Waveform({
 
   return (
     <div className="mt-4 flex items-center gap-3">
+      {/* artwork overlay: stays white over the scrim in both modes */}
       <span className="shrink-0 text-[11px] font-bold tabular-nums text-white/60">
         {fmt(currentTime)}
       </span>
@@ -84,7 +91,7 @@ export function Waveform({
             <span
               key={i}
               className={`min-w-[2px] flex-1 rounded-full ${
-                played ? 'bg-lime-300' : 'bg-white/25'
+                played ? 'bg-white' : 'bg-white/25'
               } ${disabled ? 'opacity-40' : ''}`}
               style={{ height: `${Math.max(8, v * 100)}%` }}
             />

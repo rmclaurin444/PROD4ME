@@ -51,7 +51,7 @@ export function ArtworkSlot({
           if (dropped) onFile(dropped)
         }}
         className={`relative grid aspect-square w-full place-items-center overflow-hidden rounded-2xl border border-dashed transition ${
-          dragging ? 'border-lime-300 bg-lime-300/10' : 'border-white/20 bg-white/[.03]'
+          dragging ? 'border-white bg-white/10' : 'border-white/20 bg-white/[.03]'
         } ${showUpload ? '' : 'cursor-pointer hover:border-white/40'}`}
         style={showUpload ? undefined : { background: activePreset.css }}
       >
@@ -62,6 +62,7 @@ export function ArtworkSlot({
             ) : (
               <img src={previewUrl!} alt="Artwork preview" className="size-full object-cover" />
             )}
+            {/* scrim over artwork — stays dark in both modes */}
             <button
               onClick={e => {
                 e.stopPropagation()
@@ -74,7 +75,8 @@ export function ArtworkSlot({
             </button>
           </>
         ) : (
-          <div className="pointer-events-none text-center">
+          <div className="pointer-events-none text-center text-white">
+            {/* content sits on artwork / preset gradients — stays white */}
             <ImagePlus className="mx-auto mb-2 opacity-80" size={22} />
             <p className="text-xs font-bold">Upload image, GIF or video</p>
             <p className="mt-0.5 text-[11px] opacity-70">or pick a preset below</p>
@@ -104,7 +106,7 @@ export function ArtworkSlot({
               aria-pressed={presetId === p.id}
               title={p.label}
               className={`aspect-square rounded-lg border-2 transition ${
-                presetId === p.id ? 'border-lime-300' : 'border-transparent hover:border-white/30'
+                presetId === p.id ? 'border-brand' : 'border-transparent hover:border-border'
               }`}
               style={{ background: p.css }}
             />

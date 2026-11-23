@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[.03] p-6">
+    <div className="rounded-3xl border border-border bg-surface p-6">
       <h1 className="text-2xl font-black">Forgot password</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Enter the email on your account and we&apos;ll create a reset link.
@@ -41,23 +41,23 @@ export default function ForgotPasswordPage() {
 
       {done ? (
         <div className="mt-6">
-          <p className="text-sm font-semibold text-lime-300">
+          <p className="text-sm font-semibold text-brand">
             If an account with that email exists, a reset link has been created.
           </p>
           {devLink && (
-            <div className="mt-4 rounded-2xl border border-lime-300/20 bg-lime-300/[.06] p-4">
-              <p className="text-xs font-black uppercase tracking-widest text-lime-300">Dev reset link</p>
+            <div className="mt-4 rounded-2xl border border-brand/20 bg-brand/[.06] p-4">
+              <p className="text-xs font-black uppercase tracking-widest text-brand">Dev reset link</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Test mode — no email is sent, use this link:
               </p>
-              <Link href={devLink} className="mt-2 block break-all text-xs font-bold text-lime-300">
+              <Link href={devLink} className="mt-2 block break-all text-xs font-bold text-brand">
                 {devLink}
               </Link>
             </div>
           )}
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Back to{' '}
-            <Link href="/login" className="font-bold text-lime-300">
+            <Link href="/login" className="font-bold text-brand">
               Log in
             </Link>
           </p>
@@ -77,12 +77,12 @@ export default function ForgotPasswordPage() {
             />
           </label>
 
-          {error && <p className="text-sm font-semibold text-red-400">{error}</p>}
+          {error && <p className="text-sm font-semibold text-error">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-2 w-full rounded-xl bg-brand px-4 py-3 text-sm font-black text-brand-foreground disabled:cursor-not-allowed disabled:opacity-40"
           >
             {loading ? 'Checking…' : 'Create reset link'}
           </button>
@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{' '}
-        <Link href="/signup" className="font-bold text-lime-300">
+        <Link href="/signup" className="font-bold text-brand">
           Sign up
         </Link>
       </p>

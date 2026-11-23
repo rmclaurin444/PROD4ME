@@ -29,11 +29,11 @@ export function EditProfile({
   const [draftBanner, setDraftBanner] = useState(banner)
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-5 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[#151515] p-6">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/75 p-5 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-border bg-surface p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Profile customization</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">Profile customization</p>
             <h2 className="mt-1 text-2xl font-black">Edit Profile</h2>
           </div>
           <button onClick={onClose} aria-label="Close">
@@ -42,7 +42,7 @@ export function EditProfile({
         </div>
 
         <div
-          className="mt-5 overflow-hidden rounded-2xl border border-white/10"
+          className="mt-5 overflow-hidden rounded-2xl border border-border"
           style={{ background: draft.bg, color: draft.text }}
         >
           <div className="h-24 bg-cover bg-center" style={{ backgroundImage: `url(${draftBanner})` }} />
@@ -71,7 +71,7 @@ export function EditProfile({
               key={t.id}
               onClick={() => setDraft(t)}
               className={`rounded-2xl border p-3 text-left ${
-                draft.id === t.id ? 'border-lime-300' : 'border-white/10'
+                draft.id === t.id ? 'border-brand' : 'border-border'
               }`}
             >
               <span className="mb-2 block size-8 rounded-full" style={{ background: t.accent }} />
@@ -92,7 +92,7 @@ export function EditProfile({
               onChange={e => setDraft({ ...draft, id: 'custom', accent: e.target.value })}
               className="absolute inset-6 size-12 cursor-pointer rounded-full opacity-0"
             />
-            <div className="pointer-events-none absolute inset-5 rounded-full border-4 border-[#151515]" />
+            <div className="pointer-events-none absolute inset-5 rounded-full border-4 border-border" />
           </div>
           <div>
             <p className="text-xs font-bold text-muted-foreground">RGB theme wheel</p>
@@ -104,7 +104,7 @@ export function EditProfile({
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <label className="rounded-xl border border-white/10 bg-white/[.03] p-3 text-xs font-bold text-muted-foreground">
+          <label className="rounded-xl border border-border bg-surface p-3 text-xs font-bold text-muted-foreground">
             Background
             <input
               type="color"
@@ -113,7 +113,7 @@ export function EditProfile({
               className="mt-2 block size-8 cursor-pointer"
             />
           </label>
-          <label className="rounded-xl border border-white/10 bg-white/[.03] p-3 text-xs font-bold text-muted-foreground">
+          <label className="rounded-xl border border-border bg-surface p-3 text-xs font-bold text-muted-foreground">
             Text color
             <input
               type="color"
@@ -137,7 +137,7 @@ export function EditProfile({
                 reader.readAsDataURL(file)
               }
             }}
-            className="mt-2 block w-full cursor-pointer rounded-xl border border-dashed border-white/20 bg-white/[.03] p-3 text-xs text-muted-foreground"
+            className="mt-2 block w-full cursor-pointer rounded-xl border border-dashed border-border bg-surface p-3 text-xs text-muted-foreground"
           />
         </label>
 
@@ -148,7 +148,7 @@ export function EditProfile({
               setDraft(themes[0])
               setDraftBanner(banner)
             }}
-            className="flex-1 border-white/20"
+            className="flex-1 border-border"
           >
             Reset to Default
           </Button>
@@ -158,7 +158,7 @@ export function EditProfile({
               setBanner(draftBanner)
               onClose()
             }}
-            className="flex-1 bg-lime-300 font-black text-black"
+            className="flex-1 bg-brand font-black text-brand-foreground"
           >
             Save Changes
           </Button>

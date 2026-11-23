@@ -13,9 +13,9 @@ const ACCESS_LABEL: Record<StudioBeat['access'], string> = {
 }
 
 const ACCESS_CLASS: Record<StudioBeat['access'], string> = {
-  free: 'bg-lime-300/20 text-lime-300',
-  licensed: 'bg-emerald-500/20 text-emerald-300',
-  trial: 'bg-amber-400/15 text-amber-300',
+  free: 'bg-brand/20 text-brand',
+  licensed: 'bg-success/20 text-success',
+  trial: 'bg-warning/15 text-warning',
 }
 
 export function AccessBadge({ access }: { access: StudioBeat['access'] }) {
@@ -37,25 +37,25 @@ export function StudioChrome({
 }) {
   return (
     <main className="flex h-screen min-h-0 flex-col overflow-hidden bg-background text-foreground">
-      <header className="flex shrink-0 items-center justify-between border-b border-white/10 bg-black/40 px-6 py-4">
+      <header className="flex shrink-0 items-center justify-between border-b border-border bg-background/60 px-6 py-4">
         <div className="flex items-center gap-5">
           <Link
             href="/"
-            className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-bold text-muted-foreground hover:text-lime-300"
+            className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-bold text-muted-foreground hover:text-brand"
           >
             <ArrowLeft size={16} />
             Back to Discover
           </Link>
           <div className="flex items-center gap-2">
-            <div className="grid size-7 place-items-center rounded-md bg-lime-300 text-black">
+            <div className="grid size-7 place-items-center rounded-md bg-brand text-brand-foreground">
               <Sliders size={14} />
             </div>
-            <span className="text-sm font-black uppercase tracking-widest text-lime-300">
+            <span className="text-sm font-black uppercase tracking-widest text-brand">
               Studio
             </span>
           </div>
         </div>
-        <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs font-black">
+        <span className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-black">
           {user.name} · Artist
         </span>
       </header>
@@ -91,7 +91,7 @@ export function StudioHome({
           </div>
           <button
             onClick={() => setPickerOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-lime-300 px-5 py-3 text-sm font-black text-black hover:bg-lime-200"
+            className="flex items-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-black text-brand-foreground hover:bg-brand/90"
           >
             <Plus size={18} />
             New Project
@@ -99,8 +99,8 @@ export function StudioHome({
         </div>
 
         {projects.length === 0 ? (
-          <div className="mt-24 flex flex-col items-center rounded-3xl border border-dashed border-white/15 py-20 text-center">
-            <div className="grid size-14 place-items-center rounded-2xl bg-white/[.04] text-lime-300">
+          <div className="mt-24 flex flex-col items-center rounded-3xl border border-dashed border-border py-20 text-center">
+            <div className="grid size-14 place-items-center rounded-2xl bg-surface text-brand">
               <AudioLines size={26} />
             </div>
             <h2 className="mt-5 text-2xl font-black">No projects yet</h2>
@@ -109,7 +109,7 @@ export function StudioHome({
             </p>
             <button
               onClick={() => setPickerOpen(true)}
-              className="mt-6 flex items-center gap-2 rounded-xl bg-lime-300 px-5 py-3 text-sm font-black text-black hover:bg-lime-200"
+              className="mt-6 flex items-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-black text-brand-foreground hover:bg-brand/90"
             >
               <Plus size={18} />
               New Project
@@ -123,7 +123,7 @@ export function StudioHome({
                 <button
                   key={project.id}
                   onClick={() => onOpenProject(project.id)}
-                  className="group flex flex-col rounded-3xl border border-white/10 bg-white/[.03] p-5 text-left transition hover:border-lime-300/50 hover:bg-white/[.05]"
+                  className="group flex flex-col rounded-3xl border border-border bg-surface p-5 text-left transition hover:border-brand/50 hover:bg-surface"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <span className="truncate text-lg font-black">{project.name}</span>
@@ -137,11 +137,11 @@ export function StudioHome({
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     Last edited {formatDate(project.lastEditedAt)}
                   </p>
-                  <div className="mt-5 flex items-center gap-2 border-t border-white/5 pt-4 text-[11px] text-muted-foreground">
-                    <span className="rounded-md bg-white/5 px-1.5 py-0.5">{project.bpm} BPM</span>
-                    <span className="rounded-md bg-white/5 px-1.5 py-0.5">{project.musicalKey}</span>
-                    <span className="rounded-md bg-white/5 px-1.5 py-0.5">{project.timeSignature}</span>
-                    <span className="ml-auto font-black text-lime-300 opacity-0 transition group-hover:opacity-100">
+                  <div className="mt-5 flex items-center gap-2 border-t border-border/50 pt-4 text-[11px] text-muted-foreground">
+                    <span className="rounded-md bg-surface-2/50 px-1.5 py-0.5">{project.bpm} BPM</span>
+                    <span className="rounded-md bg-surface-2/50 px-1.5 py-0.5">{project.musicalKey}</span>
+                    <span className="rounded-md bg-surface-2/50 px-1.5 py-0.5">{project.timeSignature}</span>
+                    <span className="ml-auto font-black text-brand opacity-0 transition group-hover:opacity-100">
                       Open →
                     </span>
                   </div>
@@ -179,11 +179,11 @@ function NewProjectPicker({
   const [beatId, setBeatId] = useState<string | null>(null)
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5">
-      <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-3xl border border-white/10 bg-[#151515] p-6">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-scrim p-5">
+      <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-3xl border border-border bg-surface p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Studio</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">Studio</p>
             <h2 className="mt-1 text-2xl font-black">New project</h2>
           </div>
           <button onClick={onClose} aria-label="Close">
@@ -210,14 +210,14 @@ function NewProjectPicker({
               onClick={() => setBeatId(current => (current === beat.id ? null : beat.id))}
               className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left ${
                 beatId === beat.id
-                  ? 'border-lime-300/60 bg-lime-300/[.08]'
-                  : 'border-white/10 bg-white/[.03]'
+                  ? 'border-brand/60 bg-brand/[.08]'
+                  : 'border-border bg-surface'
               }`}
             >
               <span className="min-w-0">
                 <span className="block truncate text-sm font-black">
                   {beat.title}
-                  {beat.isDemo && <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">Demo</span>}
+                  {beat.isDemo && <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">Demo</span>}
                 </span>
                 <span className="text-xs text-muted-foreground">{beat.producer}</span>
               </span>
@@ -228,7 +228,7 @@ function NewProjectPicker({
 
         <button
           onClick={() => onNewProject(name.trim() || 'Untitled project', catalog.find(b => b.id === beatId) ?? null)}
-          className="mt-5 rounded-xl bg-lime-300 py-3 text-sm font-black text-black hover:bg-lime-200"
+          className="mt-5 rounded-xl bg-brand py-3 text-sm font-black text-brand-foreground hover:bg-brand/90"
         >
           Create project
         </button>

@@ -146,7 +146,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[.03] p-6">
+    <div className="rounded-3xl border border-border bg-surface p-6">
       {step === 'details' && (
         <>
           <h1 className="text-2xl font-black">Create your account</h1>
@@ -205,19 +205,19 @@ export default function SignUpPage() {
           </div>
 
           {error && (
-            <p className="mt-4 text-sm font-semibold text-red-400">{error}</p>
+            <p className="mt-4 text-sm font-semibold text-error">{error}</p>
           )}
 
           <button
             onClick={handleContinue}
-            className="mt-6 w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black"
+            className="mt-6 w-full rounded-xl bg-brand px-4 py-3 text-sm font-black text-brand-foreground"
           >
             Continue
           </button>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="font-bold text-lime-300">
+            <Link href="/login" className="font-bold text-brand">
               Log in
             </Link>
           </p>
@@ -247,12 +247,12 @@ export default function SignUpPage() {
               onClick={() => setRole('PRODUCER')}
               className={`flex items-start gap-4 rounded-2xl border p-4 text-left transition ${
                 role === 'PRODUCER'
-                  ? 'border-lime-300 bg-lime-300/10'
-                  : 'border-white/10 bg-white/[.03] hover:border-white/20'
+                  ? 'border-brand bg-brand/10'
+                  : 'border-border bg-surface hover:border-border'
               }`}
               aria-pressed={role === 'PRODUCER'}
             >
-              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-lime-300 text-black">
+              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand text-brand-foreground">
                 <AudioLines size={20} />
               </div>
               <div className="flex-1">
@@ -262,7 +262,7 @@ export default function SignUpPage() {
                 </p>
               </div>
               {role === 'PRODUCER' && (
-                <Check size={20} className="mt-1 text-lime-300" />
+                <Check size={20} className="mt-1 text-brand" />
               )}
             </button>
 
@@ -270,12 +270,12 @@ export default function SignUpPage() {
               onClick={() => setRole('ARTIST')}
               className={`flex items-start gap-4 rounded-2xl border p-4 text-left transition ${
                 role === 'ARTIST'
-                  ? 'border-lime-300 bg-lime-300/10'
-                  : 'border-white/10 bg-white/[.03] hover:border-white/20'
+                  ? 'border-brand bg-brand/10'
+                  : 'border-border bg-surface hover:border-border'
               }`}
               aria-pressed={role === 'ARTIST'}
             >
-              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-lime-300 text-black">
+              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand text-brand-foreground">
                 <Mic2 size={20} />
               </div>
               <div className="flex-1">
@@ -285,19 +285,19 @@ export default function SignUpPage() {
                 </p>
               </div>
               {role === 'ARTIST' && (
-                <Check size={20} className="mt-1 text-lime-300" />
+                <Check size={20} className="mt-1 text-brand" />
               )}
             </button>
           </div>
 
           {error && (
-            <p className="mt-4 text-sm font-semibold text-red-400">{error}</p>
+            <p className="mt-4 text-sm font-semibold text-error">{error}</p>
           )}
 
           <button
             onClick={handleRoleContinue}
             disabled={!role}
-            className="mt-6 w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-6 w-full rounded-xl bg-brand px-4 py-3 text-sm font-black text-brand-foreground disabled:cursor-not-allowed disabled:opacity-40"
           >
             {role === 'ARTIST' ? 'Continue' : 'Create account'}
           </button>
@@ -337,7 +337,7 @@ export default function SignUpPage() {
                     key={genre}
                     type="button"
                     onClick={() => toggleGenre(genre)}
-                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 text-xs font-bold text-white/80 transition hover:border-lime-300/60 hover:text-lime-300"
+                    className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-bold text-foreground/80 transition hover:border-brand/60 hover:text-brand"
                   >
                     <Music4 size={12} /> {genre}
                   </button>
@@ -357,13 +357,13 @@ export default function SignUpPage() {
           </div>
 
           {error && (
-            <p className="mt-4 text-sm font-semibold text-red-400">{error}</p>
+            <p className="mt-4 text-sm font-semibold text-error">{error}</p>
           )}
 
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="mt-6 w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-6 w-full rounded-xl bg-brand px-4 py-3 text-sm font-black text-brand-foreground disabled:cursor-not-allowed disabled:opacity-40"
           >
             {loading ? 'Creating account...' : 'Create account'}
           </button>

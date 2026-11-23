@@ -67,11 +67,11 @@ export function PriceEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#151515] p-6">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-scrim p-5">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-lime-300">Set pricing</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">Set pricing</p>
             <h2 className="mt-1 text-2xl font-black">{beat.title}</h2>
           </div>
           <button onClick={onClose} aria-label="Close">
@@ -90,7 +90,7 @@ export function PriceEditor({
               placeholder="35"
               disabled={busy}
             />
-            <span className="mt-1 block min-h-4 text-xs font-semibold text-red-400">{priceError}</span>
+            <span className="mt-1 block min-h-4 text-xs font-semibold text-error">{priceError}</span>
           </label>
 
           <label className="text-xs font-bold text-muted-foreground">
@@ -106,18 +106,18 @@ export function PriceEditor({
             <span className="mt-1 block text-xs text-muted-foreground">
               {sold ? 'The exclusive has sold — price can no longer change.' : 'Blank means not offered.'}
             </span>
-            <span className="mt-1 block min-h-4 text-xs font-semibold text-red-400">{exclusiveError}</span>
+            <span className="mt-1 block min-h-4 text-xs font-semibold text-error">{exclusiveError}</span>
           </label>
 
           <Button
             onClick={save}
             disabled={busy || !!priceError || !!exclusiveError}
-            className="bg-lime-300 font-black text-black disabled:opacity-50"
+            className="bg-brand font-black text-brand-foreground disabled:opacity-50"
           >
             {busy ? <Loader2 className="mr-2 animate-spin" size={16} /> : null}
             Save pricing
           </Button>
-          {error && <p className="text-sm font-semibold text-red-400">{error}</p>}
+          {error && <p className="text-sm font-semibold text-error">{error}</p>}
         </div>
       </div>
     </div>

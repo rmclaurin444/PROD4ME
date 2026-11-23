@@ -2,6 +2,7 @@
 
 import { Search } from 'lucide-react'
 import { Avatar } from '@/components/app/ui'
+import { ThemeToggleCompact } from '@/components/app/theme-toggle'
 
 export function Header({
   search,
@@ -19,9 +20,11 @@ export function Header({
   roleLabel: string
 }) {
   return (
+    // The header floats over beat artwork in the feed, so its chrome keeps the
+    // dark scrim + white treatment in BOTH modes (artwork-overlay exception).
     <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-4 px-5 py-5 md:px-8">
       <div className="relative max-w-xs flex-1">
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-2 backdrop-blur">
+        <div className="flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 backdrop-blur">
           <Search size={16} className="text-muted-foreground" />
           <input
             aria-label="Search users"
@@ -32,12 +35,12 @@ export function Header({
           />
         </div>
         {search && (
-          <div className="absolute left-0 right-0 top-12 rounded-2xl border border-white/10 bg-[#151515] p-2 shadow-2xl">
+          <div className="absolute left-0 right-0 top-12 rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl">
             {matches.map(u => (
               <button
                 key={u.name}
                 onClick={() => onSelectUser(u)}
-                className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-white/10"
+                className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-surface-2"
               >
                 <Avatar text={u.avatar} />
                 <span>
@@ -50,13 +53,17 @@ export function Header({
         )}
       </div>
 
-      <span className="text-sm font-black uppercase tracking-widest text-lime-300">
+      <span className="text-sm font-black uppercase tracking-widest text-brand">
         {view === 'feed' ? 'For you' : roleLabel}
       </span>
 
-      <span className="rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-black">
-        {roleLabel}
-      </span>
+      <div className="flex items-center gap-3">
+        <ThemeToggleCompact />
+        {/* scrim chip: header sits over artwork in the feed */}
+        <span className="rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-black text-white backdrop-blur">
+          {roleLabel}
+        </span>
+      </div>
     </header>
   )
 }

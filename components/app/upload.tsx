@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { TagInput } from '@/components/app/tag-input'
 import { ArtworkSlot } from '@/components/app/artwork-slot'
 import { AudioDropzone } from '@/components/app/audio-dropzone'
+import { BulkUploadView } from '@/components/app/bulk-upload'
 import { readAudioDuration, uploadWithProgress, computePeaks } from '@/lib/upload-client'
 
 const AUDIO_MAX = 250 * 1024 * 1024
@@ -33,6 +34,7 @@ async function presign(kind: 'audio' | 'artwork', file: File) {
 }
 
 export function UploadView() {
+  const [mode, setMode] = useState<'single' | 'bulk'>('single')
   const [title, setTitle] = useState('')
   const [bpm, setBpm] = useState('')
   const [musicalKey, setMusicalKey] = useState('')
@@ -182,7 +184,32 @@ export function UploadView() {
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 overflow-y-auto px-5 pb-28 pt-24 md:px-12">
       <p className="text-xs font-bold uppercase tracking-widest text-brand">Creator studio</p>
-      <h1 className="mt-2 text-4xl font-black">Upload a new beat</h1>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-4xl font-black">Upload a new beat</h1>
+        {/* single vs bulk */}
+        <div className="flex rounded-lg border border-border bg-surface p-0.5">
+          {(
+            [
+              ['single', 'Single beat'],
+              ['bulk', 'Bulk upload'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setMode(value)}
+              aria-pressed={mode === value}
+              className={`rounded-md px-3 py-1.5 text-xs font-black ${
+                mode === value ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {mode === 'bulk' && <BulkUploadView />}
+      {mode === 'single' && (
 
       <div className="mt-8 grid gap-5 md:grid-cols-2">
         <div className="flex flex-col gap-4">
@@ -331,6 +358,7 @@ export function UploadView() {
           </Button>
         </div>
       </div>
+      )}
     </div>
   )
 }

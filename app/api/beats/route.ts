@@ -55,6 +55,8 @@ export async function POST(request: Request) {
     artPreset?: string | null
     peaks?: number[]
     durationSec?: number | null
+    playlistId?: string | null
+    playlistPosition?: number | null
   }
 
   try {
@@ -67,6 +69,25 @@ export async function POST(request: Request) {
 
   if (!title || title.trim().length === 0) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+  }
+
+  // Optional playlist assignment: the playlist must belong to this producer.
+  // (Bulk upload flow — the playlist is created before its beats.)
+  let playlistId: string | null = null
+  let playlistPosition: number | null = null
+  if (body.playlistId) {
+    const playlist = await prisma.playlist.findUnique({
+      where: { id: body.playlistId },
+      select: { id: true, producerId: true },
+    })
+    if (!playlist || playlist.producerId !== session.user.id) {
+      return NextResponse.json({ error: 'Playlist not found' }, { status: 400 })
+    }
+    playlistId = playlist.id
+    playlistPosition =
+      typeof body.playlistPosition === 'number' && Number.isFinite(body.playlistPosition)
+        ? Math.floor(body.playlistPosition)
+        : null
   }
 
   if (!audioKey) {
@@ -106,6 +127,27 @@ export async function POST(request: Request) {
     )
   ).slice(0, 8)
 
+  // Resolve tags by slug OR name: some seeded tags hold a slug that differs
+  // from slugify(name), so a slug-only connectOrCreate would miss them and the
+  // create would collide on the unique `name`.
+  const wantedTags = cleanTags.map(name => ({ name, slug: slugify(name) }))
+  const existingTags = wantedTags.length
+    ? await prisma.tag.findMany({
+        where: {
+          OR: [
+            { slug: { in: wantedTags.map(w => w.slug) } },
+            { name: { in: wantedTags.map(w => w.name) } },
+          ],
+        },
+        select: { id: true, name: true, slug: true },
+      })
+    : []
+  const existingSlugs = new Set(existingTags.map(t => t.slug))
+  const existingNames = new Set(existingTags.map(t => t.name))
+  const tagsToCreate = wantedTags.filter(
+    w => !existingSlugs.has(w.slug) && !existingNames.has(w.name)
+  )
+
   try {
     const beat = await prisma.beat.create({
       data: {
@@ -120,11 +162,14 @@ export async function POST(request: Request) {
         artPreset: artPreset ?? null,
         peaks: isValidPeaks(peaks) ? peaks : Prisma.JsonNull,
         durationSec: typeof durationSec === 'number' ? durationSec : null,
+        playlistId,
+        playlistPosition,
         producerId: session.user.id,
         tags: {
-          connectOrCreate: cleanTags.map(name => ({
-            where: { slug: slugify(name) },
-            create: { name, slug: slugify(name) },
+          connect: existingTags.map(tag => ({ id: tag.id })),
+          create: tagsToCreate.map(tag => ({
+            name: tag.name,
+            slug: tag.slug,
           })),
         },
       },

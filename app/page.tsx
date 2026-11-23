@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isAdmin } from '@/lib/admin'
 import { getBeats } from '@/lib/beats'
+import { getProducerPlaylists } from '@/lib/playlists'
 import { getArtistLibrary } from '@/lib/licenses'
 import { AppShell } from '@/components/app/app-shell'
 
@@ -44,6 +45,8 @@ export default async function Page() {
         })
       : 0
 
+  const playlists = user.role === 'PRODUCER' ? await getProducerPlaylists(user.id) : []
+
   return (
     <AppShell
       user={{
@@ -59,6 +62,7 @@ export default async function Page() {
       library={library}
       openOffers={ownedOffers}
       producers={producers}
+      playlists={playlists}
       isAdmin={isAdmin(user.email)}
     />
   )

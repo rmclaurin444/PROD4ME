@@ -72,6 +72,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   beats     Beat[]
+  playlists Playlist[]
   offersMade Offer[] @relation("ArtistOffers")
   offersReceived Offer[] @relation("ProducerOffers")
   payments  Payment[]
@@ -101,6 +102,9 @@ model Beat {
 
   exclusivePriceCents Int?  @map("exclusivePriceCents")
   exclusiveSold       Boolean @default(false) @map("exclusiveSold")
+  playlistId          String?
+  playlist            Playlist? @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+  playlistPosition    Int?
   offers     Offer[]
   licenses   License[]
   payments   Payment[]
@@ -114,6 +118,21 @@ model Beat {
 
   @@index([producerId])
   @@index([createdAt])
+}
+
+model Playlist {
+  id          String   @id @default(cuid())
+  producerId  String
+  producer    User     @relation(fields: [producerId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  artKey      String?
+  artPreset   String?
+  beats       Beat[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([producerId])
 }
 
 model Tag {

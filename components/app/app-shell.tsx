@@ -26,6 +26,7 @@ import { EditProfile } from '@/components/app/edit-profile'
 import { themes, getInitials } from '@/components/app/data'
 import type { ShapedBeat } from '@/lib/beats'
 import type { ShapedLicense } from '@/lib/offers'
+import type { ShapedPlaylist } from '@/lib/playlists'
 import type { View } from '@/components/app/nav'
 import { trackEvent } from '@/lib/recommendations/track'
 import { SKIP_UNDER_MILLIS } from '@/lib/recommendations/constants'
@@ -49,6 +50,7 @@ export function AppShell({
   library,
   openOffers,
   producers,
+  playlists = [],
   isAdmin,
 }: {
   user: SessionUser
@@ -56,6 +58,7 @@ export function AppShell({
   library: ShapedLicense[]
   openOffers: number
   producers: { id: string; name: string; avatar: string | null; bio: string | null }[]
+  playlists?: ShapedPlaylist[]
   /** Admin-only: shows the /dev panel link in the sidebar. */
   isAdmin?: boolean
 }) {
@@ -447,6 +450,7 @@ export function AppShell({
               userName={user.name}
               beats={myBeats}
               openOffers={openOffers}
+              playlists={playlists}
               onEditPrice={b => setEditPriceBeat(b)}
             />
           )}
@@ -474,6 +478,7 @@ export function AppShell({
                 userName={user.name}
                 avatarText={avatarText}
                 beats={myBeats}
+                playlists={playlists}
                 onEditPrice={b => setEditPriceBeat(b)}
               />
             ))}

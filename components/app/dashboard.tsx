@@ -1,21 +1,29 @@
 'use client'
 
-import { BarChart3, Pencil } from 'lucide-react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { BarChart3, ListMusic, Pencil } from 'lucide-react'
 import { TagPills } from '@/components/app/ui'
 import { formatMoney } from '@/lib/money'
 import type { ShapedBeat } from '@/lib/beats'
+import type { ShapedPlaylist } from '@/lib/playlists'
+import { PlaylistEditor } from '@/components/app/playlist-editor'
 
 export function Dashboard({
   userName,
   beats,
   openOffers,
+  playlists = [],
   onEditPrice,
 }: {
   userName: string
   beats: ShapedBeat[]
   openOffers: number
+  playlists?: ShapedPlaylist[]
   onEditPrice: (beat: ShapedBeat) => void
 }) {
+  const [editingPlaylist, setEditingPlaylist] = useState<ShapedPlaylist | null>(null)
+  const router = useRouter()
   const firstName = userName.trim().split(/\s+/)[0]
 
   const totalPlays = beats.reduce((sum, b) => sum + b.plays, 0)
@@ -84,10 +92,55 @@ export function Dashboard({
         ))}
       </div>
 
+      {playlists.length > 0 && (
+        <>
+          <h2 className="mt-10 text-xl font-black">Your playlists · {playlists.length}</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {playlists.map(playlist => (
+              <div
+                key={playlist.id}
+                className="flex flex-col rounded-3xl border border-border bg-surface p-4"
+              >
+                <div className="flex items-center gap-3">
+                  {playlist.artUrl ? (
+                    <img src={playlist.artUrl} alt="" className="size-12 rounded-xl object-cover" />
+                  ) : (
+                    <div className="grid size-12 place-items-center rounded-xl bg-surface-2">
+                      <ListMusic size={18} className="text-brand" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-black">{playlist.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {playlist.beats.length} beat{playlist.beats.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setEditingPlaylist(playlist)}
+                  aria-label={`Edit playlist ${playlist.title}`}
+                  className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-border py-2 text-[10px] font-black hover:bg-surface-2"
+                >
+                  <Pencil size={12} /> EDIT PLAYLIST
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="mt-8 rounded-2xl border border-brand/20 bg-brand/[.06] p-5">
         <TagPills tags={['dark trap', 'melodic']} onTag={() => {}} />
         <p className="mt-4 text-lg font-black">Your #darktrap tagged beats get 2x more plays.</p>
       </div>
+
+      {editingPlaylist && (
+        <PlaylistEditor
+          playlist={editingPlaylist}
+          onClose={() => setEditingPlaylist(null)}
+          onChanged={() => router.refresh()}
+        />
+      )}
     </div>
   )
 }

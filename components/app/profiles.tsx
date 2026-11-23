@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Pencil, Plus, Link2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Download, ListMusic, Pencil, Plus, Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/app/ui'
 import { formatMoney } from '@/lib/money'
 import type { ShapedBeat } from '@/lib/beats'
 import type { ShapedLicense } from '@/lib/offers'
+import type { ShapedPlaylist } from '@/lib/playlists'
+import { PurchaseModal } from '@/components/app/purchase-modal'
 
 export function ProducerProfile({
   onEdit,
@@ -16,6 +19,7 @@ export function ProducerProfile({
   userName,
   avatarText,
   beats,
+  playlists = [],
   onEditPrice,
 }: {
   onEdit: () => void
@@ -25,8 +29,12 @@ export function ProducerProfile({
   userName: string
   avatarText: string
   beats?: ShapedBeat[]
+  playlists?: ShapedPlaylist[]
   onEditPrice?: (beat: ShapedBeat) => void
 }) {
+  const router = useRouter()
+  const [openPlaylistId, setOpenPlaylistId] = useState<string | null>(null)
+  const [purchase, setPurchase] = useState<{ beat: ShapedBeat } | null>(null)
   return (
     <div className="mx-auto w-full max-w-5xl overflow-y-auto px-5 pb-28 pt-24 md:px-12">
       <div className="h-44 rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${banner})` }} />
@@ -46,6 +54,95 @@ export function ProducerProfile({
       >
         Producer
       </span>
+
+      {playlists.length > 0 && (
+        <>
+          <h2 className="mt-10 text-xl font-black">Playlists · {playlists.length}</h2>
+          <div className="mt-3 flex flex-col gap-3">
+            {playlists.map(playlist => {
+              const isOpen = openPlaylistId === playlist.id
+              return (
+                <div
+                  key={playlist.id}
+                  className="rounded-3xl border border-border bg-surface p-4"
+                >
+                  <button
+                    onClick={() => setOpenPlaylistId(isOpen ? null : playlist.id)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center gap-3 text-left"
+                  >
+                    {playlist.artUrl ? (
+                      <img src={playlist.artUrl} alt="" className="size-12 rounded-xl object-cover" />
+                    ) : playlist.artPreset ? null : null}
+                    {!playlist.artUrl && (
+                      <div className="grid size-12 place-items-center rounded-xl bg-surface-2">
+                        <ListMusic size={18} className="text-brand" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-black">{playlist.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {playlist.beats.length} beat{playlist.beats.length === 1 ? '' : 's'}
+                        {playlist.description ? ` · ${playlist.description}` : ''}
+                      </p>
+                    </div>
+                    <span className="text-xs font-black text-muted-foreground">
+                      {isOpen ? 'HIDE' : 'OPEN'}
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="mt-3 flex flex-col gap-2">
+                      {playlist.beats.map((beat, index) => (
+                        <div
+                          key={beat.id}
+                          className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface-2/50 p-2.5"
+                        >
+                          <span className="w-5 text-center text-xs font-black tabular-nums text-muted-foreground">
+                            {index + 1}
+                          </span>
+                          {beat.artUrl ? (
+                            <img src={beat.artUrl} alt="" className="size-10 rounded-lg object-cover" />
+                          ) : playlist.artUrl ? (
+                            <img src={playlist.artUrl} alt="" className="size-10 rounded-lg object-cover" />
+                          ) : (
+                            <div className="size-10 rounded-lg bg-surface-2" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-black">{beat.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {beat.price === 0 ? (
+                                <span className="rounded-full bg-brand px-2 py-0.5 font-black text-brand-foreground">
+                                  FREE
+                                </span>
+                              ) : (
+                                `$${beat.price}`
+                              )}
+                              {beat.exclusivePriceCents !== null && !beat.exclusiveSold && (
+                                <> · Exclusive {formatMoney(beat.exclusivePriceCents)}</>
+                              )}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setPurchase({ beat })}
+                            aria-label={`Buy or make an offer for ${beat.title}`}
+                            className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-[10px] font-black hover:bg-surface-2"
+                          >
+                            BUY / OFFER
+                          </button>
+                        </div>
+                      ))}
+                      {playlist.beats.length === 0 && (
+                        <p className="text-center text-xs text-muted-foreground/60">Playlist is empty</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
 
       {onEditPrice && beats && beats.length > 0 && (
         <>
@@ -81,6 +178,16 @@ export function ProducerProfile({
             ))}
           </div>
         </>
+      )}
+
+      {purchase && (
+        <PurchaseModal
+          beat={purchase.beat}
+          mode="buy"
+          owned={[]}
+          onClose={() => setPurchase(null)}
+          onObtained={() => router.refresh()}
+        />
       )}
     </div>
   )

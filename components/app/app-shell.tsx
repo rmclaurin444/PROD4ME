@@ -27,6 +27,7 @@ import { themes, getInitials } from '@/components/app/data'
 import type { ShapedBeat } from '@/lib/beats'
 import type { ShapedLicense } from '@/lib/offers'
 import type { ShapedPlaylist } from '@/lib/playlists'
+import { LeaderboardView } from '@/components/app/leaderboard'
 import type { View } from '@/components/app/nav'
 import { trackEvent } from '@/lib/recommendations/track'
 import { SKIP_UNDER_MILLIS } from '@/lib/recommendations/constants'
@@ -361,6 +362,30 @@ export function AppShell({
                 setView('inbox')
               }}
               onBack={() => setProfileUser(null)}
+            />
+          ) : view === 'leaderboard' ? (
+            <LeaderboardView
+              isProducer={isProducer}
+              onOpenBeat={beatId => {
+                setView('feed')
+                const index = feedBeats.findIndex(b => b.id === beatId)
+                if (index >= 0) {
+                  setIndex(index)
+                  setProfileUser(null)
+                }
+              }}
+              onOpenProducer={producerId => {
+                const producer = producers.find(p => p.id === producerId)
+                if (producer) {
+                  setProfileUser({
+                    id: producer.id,
+                    name: producer.name,
+                    role: 'Producer',
+                    avatar: producer.avatar ?? getInitials(producer.name),
+                    bio: producer.bio ?? '',
+                  })
+                }
+              }}
             />
           ) : view === 'inbox' ? (
             <InboxView

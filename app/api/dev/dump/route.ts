@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { isAdmin } from '@/lib/admin'
 import { addToAudioPool, devPanelEnabled, dumpAudioFile } from '@/lib/dev-seed'
 import { MAX_AUDIO_BYTES } from '@/lib/storage'
@@ -80,3 +81,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 400 })
   }
 }
+

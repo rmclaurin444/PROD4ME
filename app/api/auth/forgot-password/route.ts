@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { issueResetToken } from '@/lib/reset-token'
+import { EMAIL_TEMPLATES, sendEmail } from '@/lib/email'
 
 const WINDOW_MS = 15 * 60 * 1000
 const MAX_REQUESTS = 5
@@ -43,8 +44,20 @@ export async function POST(request: Request) {
     const token = await issueResetToken(email)
     const origin = request.headers.get('origin') ?? 'http://localhost:3000'
     const link = `${origin}/reset?token=${token}`
-    console.info(`[forgot-password] reset link for ${email}: ${link}`)
-    // never email real addresses in this test build — return the link to the UI in dev only
+    // Email the reset link through lib/email; in dev without RESEND_API_KEY
+    // the link is logged and returned to the UI (never in production).
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Reset your PROD4ME password',
+        heading: 'Password reset',
+        lines: ['Open the link below to choose a new password. The link expires in one hour.'],
+        ctaLabel: 'Reset password',
+        link,
+      })
+    } catch (error) {
+      console.error('Reset email error:', error)
+    }
     if (process.env.NODE_ENV !== 'production') {
       devLink = link
     }

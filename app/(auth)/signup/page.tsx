@@ -15,6 +15,11 @@ export default function SignUpPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>('details')
   const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
+  const [usernameError, setUsernameError] = useState('')
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [phone, setPhone] = useState('')
+  const [phoneError, setPhoneError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -27,8 +32,41 @@ export default function SignUpPage() {
   const totalSteps = role === 'ARTIST' ? 3 : 2
   const stepNumber = step === 'details' ? 1 : step === 'role' ? 2 : 3
 
+  // live username availability (debounced)
+  useEffect(() => {
+    const normalized = username.trim().toLowerCase()
+    if (!normalized) {
+      setUsernameAvailable(null)
+      setUsernameError('')
+      return
+    }
+    if (!/^[a-z0-9_.]{3,20}$/.test(normalized)) {
+      setUsernameAvailable(false)
+      setUsernameError('3–20 characters: lowercase letters, numbers, "_" and "."')
+      return
+    }
+    setUsernameError('')
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/username-available?u=${encodeURIComponent(normalized)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        setUsernameAvailable(!!data.available)
+        if (!data.available) setUsernameError('That username is taken')
+      } catch {
+        // availability check is cosmetic on the client — the server re-checks
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [username])
+
   const validateDetails = () => {
     if (!name.trim()) return 'Name is required'
+    if (!username.trim()) return 'Username is required'
+    if (usernameAvailable === false) return 'That username is taken'
+    if (phone.trim() && !/^\+?[0-9\s().-]{7,}$/.test(phone.trim())) {
+      return 'Enter a valid phone number (e.g. +14045551234)'
+    }
     if (!email.includes('@')) return 'Please enter a valid email'
     if (password.length < 8) return 'Password must be at least 8 characters'
     if (password !== confirmPassword) return 'Passwords do not match'
@@ -109,6 +147,8 @@ export default function SignUpPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
+          username: username.trim().toLowerCase(),
+          phone: phone.trim() || undefined,
           email,
           password,
           role,
@@ -125,7 +165,7 @@ export default function SignUpPage() {
       }
 
       const signInResult = await signIn('credentials', {
-        email,
+        identifier: email,
         password,
         redirect: false,
       })
@@ -137,7 +177,8 @@ export default function SignUpPage() {
         return
       }
 
-      router.push('/')
+      // email verification is required before using the app
+      router.push('/verify-pending')
       router.refresh()
     } catch {
       setError('Something went wrong. Please try again.')
@@ -166,6 +207,37 @@ export default function SignUpPage() {
                 aria-label="Name"
               />
             </label>
+
+            <label className="text-xs font-bold text-muted-foreground">
+              Username
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                className="input mt-2"
+                placeholder="e.g. beatmaker_j"
+                aria-label="Username"
+              />
+            </label>
+            <span className="-mt-2 block text-xs font-semibold text-error">{usernameError}</span>
+            {usernameError === '' && usernameAvailable && (
+              <span className="-mt-2 block text-xs font-semibold text-success">Username available ✓</span>
+            )}
+
+            <label className="text-xs font-bold text-muted-foreground">
+              Phone (optional)
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="input mt-2"
+                placeholder="+14045551234"
+                aria-label="Phone"
+              />
+            </label>
+            {phoneError && (
+              <span className="-mt-2 block text-xs font-semibold text-error">{phoneError}</span>
+            )}
 
             <label className="text-xs font-bold text-muted-foreground">
               Email

@@ -1,6 +1,6 @@
 import { Home, Plus, BarChart3, UserRound, Trophy } from 'lucide-react'
 
-export type View = 'feed' | 'upload' | 'dashboard' | 'profile' | 'leaderboard'
+export type View = 'feed' | 'upload' | 'dashboard' | 'profile' | 'leaderboard' | 'settings'
 
 export function getNav(isArtist: boolean) {
   return isArtist

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { FeedTagNotFoundError, getFeedPage } from '@/lib/recommendations/feed.ts'
 
 /**
@@ -14,12 +15,9 @@ import { FeedTagNotFoundError, getFeedPage } from '@/lib/recommendations/feed.ts
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  const session = await auth()
-  const userId = session?.user?.id
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const verified = await requireVerifiedUser()
+  if (verified instanceof NextResponse) return verified
+  const userId = verified.userId
 
   const { searchParams } = new URL(request.url)
   const cursor = searchParams.get('cursor')
@@ -36,3 +34,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Could not load feed' }, { status: 500 })
   }
 }
+
+

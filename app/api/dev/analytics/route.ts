@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { isAdmin } from '@/lib/admin'
 import { getAnalytics, parseRange } from '@/lib/analytics'
 
@@ -36,3 +37,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Analytics failed' }, { status: 500 })
   }
 }
+

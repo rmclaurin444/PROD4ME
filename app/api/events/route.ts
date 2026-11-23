@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { ALL_EVENT_TYPES, type EventTypeName } from '@/lib/recommendations/constants'
 import { rebuildUserVector } from '@/lib/recommendations/vectors.ts'
@@ -22,8 +23,9 @@ import { rebuildUserVector } from '@/lib/recommendations/vectors.ts'
  *    stored, so recommendations stay unchanged).
  */
 export async function POST(request: Request) {
-  const session = await auth()
-  const userId = session?.user?.id
+  const verified = await requireVerifiedUser()
+  if (verified instanceof NextResponse) return verified
+  const userId = verified.userId
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -117,8 +119,9 @@ export async function POST(request: Request) {
  * the producer's own beats. Vector rebuild stays non-blocking.
  */
 export async function DELETE(request: Request) {
-  const session = await auth()
-  const userId = session?.user?.id
+  const verified = await requireVerifiedUser()
+  if (verified instanceof NextResponse) return verified
+  const userId = verified.userId
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -191,3 +194,5 @@ function counterOp(
   }
   return null
 }
+
+

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { isAdmin } from '@/lib/admin'
 import { clearAudioPool, devPanelEnabled, listAudioPool } from '@/lib/dev-seed'
 
@@ -48,3 +49,4 @@ export async function DELETE() {
     return NextResponse.json({ error: 'Clear failed' }, { status: 500 })
   }
 }
+

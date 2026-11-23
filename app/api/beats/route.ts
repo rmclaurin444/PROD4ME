@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { beatInclude, getBeats } from '@/lib/beats'
 import { dollarsToCents } from '@/lib/offers'
@@ -33,11 +34,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const verified = await requireVerifiedUser()
+  if (verified instanceof NextResponse) return verified
+  const session = { user: { id: verified.userId, role: verified.role } }
 
   if (session.user.role !== 'PRODUCER') {
     return NextResponse.json({ error: 'Only producers can upload beats' }, { status: 403 })
@@ -200,3 +199,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not save beat' }, { status: 500 })
   }
 }
+
+

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { isAdmin } from '@/lib/admin'
 import { devPanelEnabled, devDatasetStats, purgeDevDataset, seedDevDataset } from '@/lib/dev-seed'
 
@@ -89,3 +90,4 @@ export async function DELETE() {
     return NextResponse.json({ error: 'Purge failed' }, { status: 500 })
   }
 }
+

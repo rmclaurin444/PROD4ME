@@ -28,6 +28,7 @@ import type { ShapedBeat } from '@/lib/beats'
 import type { ShapedLicense } from '@/lib/offers'
 import type { ShapedPlaylist } from '@/lib/playlists'
 import { LeaderboardView } from '@/components/app/leaderboard'
+import { SettingsView } from '@/components/app/settings'
 import type { View } from '@/components/app/nav'
 import { trackEvent } from '@/lib/recommendations/track'
 import { SKIP_UNDER_MILLIS } from '@/lib/recommendations/constants'
@@ -43,6 +44,8 @@ type SessionUser = {
   bio?: string | null
   banner?: string | null
   theme?: string | null
+  avatar?: string | null
+  emailVerified?: boolean
 }
 
 export function AppShell({
@@ -108,6 +111,7 @@ export function AppShell({
   const [search, setSearch] = useState('')
   const [profileUser, setProfileUser] = useState<any>(null)
   const [followed, setFollowed] = useState<string[]>([])
+  const [avatar, setAvatar] = useState(user.avatar ?? null)
   const [counts, setCounts] = useState<Record<string, number>>({
     'Melo K': 12400,
     'Nia Saint': 8900,
@@ -329,6 +333,7 @@ export function AppShell({
             }}
             view={view}
             roleLabel={roleLabel}
+            onOpenSettings={() => setView('settings')}
           />
 
           {profileUser ? (
@@ -387,6 +392,8 @@ export function AppShell({
                 }
               }}
             />
+          ) : view === 'settings' ? (
+            <SettingsView onClose={() => setView('feed')} />
           ) : view === 'dashboard' ? (
             isProducer ? (
               // consolidated producer dashboard: overview + inbox on one page
@@ -515,6 +522,7 @@ export function AppShell({
                 bio={bio}
                 userName={user.name}
                 avatarText={avatarText}
+                avatarUrl={user.avatar ?? null}
               />
             ) : (
               <ProducerProfile
@@ -524,6 +532,7 @@ export function AppShell({
                 bio={bio}
                 userName={user.name}
                 avatarText={avatarText}
+                avatarUrl={user.avatar ?? null}
                 beats={myBeats}
                 playlists={playlists}
                 onEditPrice={b => setEditPriceBeat(b)}
@@ -615,8 +624,12 @@ export function AppShell({
               setBanner={setBanner}
               bio={bio}
               setBio={setBio}
-              avatar={avatarText}
-              onClose={() => setEdit(false)}
+              avatar={user.avatar ?? null}
+              setAvatar={setAvatar}
+              onClose={() => {
+                setEdit(false)
+                router.refresh()
+              }}
             />
           )}
         </section>

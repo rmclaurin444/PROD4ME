@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { presignDownload, BUCKET_ARTWORK, publicUrl } from '@/lib/storage'
 
@@ -81,3 +82,4 @@ export async function POST(request: Request) {
     { status: 201 }
   )
 }
+

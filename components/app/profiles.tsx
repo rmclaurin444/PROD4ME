@@ -18,6 +18,7 @@ export function ProducerProfile({
   bio,
   userName,
   avatarText,
+  avatarUrl,
   beats,
   playlists = [],
   onEditPrice,
@@ -28,6 +29,7 @@ export function ProducerProfile({
   bio: string
   userName: string
   avatarText: string
+  avatarUrl?: string | null
   beats?: ShapedBeat[]
   playlists?: ShapedPlaylist[]
   onEditPrice?: (beat: ShapedBeat) => void
@@ -37,10 +39,10 @@ export function ProducerProfile({
   const [purchase, setPurchase] = useState<{ beat: ShapedBeat } | null>(null)
   return (
     <div className="mx-auto w-full max-w-5xl overflow-y-auto px-5 pb-28 pt-24 md:px-12">
-      <div className="h-44 rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${banner})` }} />
+      <div className="aspect-[3/1] w-full rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${banner})` }} />
 
       <div className="-mt-12 flex items-end justify-between">
-        <Avatar text={avatarText} size="size-24" />
+        <Avatar text={avatarText} src={avatarUrl} size="size-24" />
         <Button onClick={onEdit} variant="outline" className="border-border">
           Edit Profile
         </Button>
@@ -205,6 +207,7 @@ export function ArtistProfile({
   bio,
   userName,
   avatarText,
+  avatarUrl,
 }: {
   tracks: { title: string; url: string; beat: string; art: string | null }[]
   saved: string[]
@@ -217,6 +220,7 @@ export function ArtistProfile({
   bio: string
   userName: string
   avatarText: string
+  avatarUrl?: string | null
 }) {
   const [downloading, setDownloading] = useState<string | null>(null)
   const [downloadError, setDownloadError] = useState('')
@@ -237,10 +241,10 @@ export function ArtistProfile({
   }
   return (
     <div className="mx-auto w-full max-w-5xl overflow-y-auto px-5 pb-28 pt-24 md:px-12">
-      <div className="h-44 rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${banner})` }} />
+      <div className="aspect-[3/1] w-full rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${banner})` }} />
 
       <div className="-mt-12 flex items-end justify-between">
-        <Avatar text={avatarText} size="size-24" />
+        <Avatar text={avatarText} src={avatarUrl} size="size-24" />
         <Button onClick={onEdit} variant="outline" className="border-border">
           Edit Profile
         </Button>

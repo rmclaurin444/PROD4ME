@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { getArtistLibrary } from '@/lib/licenses'
 
 export async function GET() {
-  const session = await auth()
+  const verified = await requireVerifiedUser()
+  if (verified instanceof NextResponse) return verified
+  const session = { user: { id: verified.userId, role: verified.role } }
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -13,3 +15,4 @@ export async function GET() {
   const licenses = await getArtistLibrary(session.user.id)
   return NextResponse.json({ licenses })
 }
+

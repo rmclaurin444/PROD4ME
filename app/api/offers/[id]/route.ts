@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import {
   WAITING_OFFER_STATUSES,
@@ -120,3 +121,4 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   })
   return NextResponse.json({ offer: shapeOffer(updated) })
 }
+

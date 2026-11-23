@@ -30,6 +30,8 @@ export const ARTWORK_MIME_TYPES = [
 
 export const MAX_AUDIO_BYTES = 250 * 1024 * 1024
 export const MAX_ARTWORK_BYTES = 20 * 1024 * 1024
+export const IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 let client: Minio.Client | null = null
 
@@ -46,15 +48,23 @@ function getClient() {
   return client
 }
 
-export function buildKey(kind: 'audio' | 'artwork', userId: string, ext: string) {
+export function buildKey(kind: 'audio' | 'artwork' | 'avatars' | 'banners', userId: string, ext: string) {
   const safeExt = ext.replace(/^\./, '').toLowerCase() || 'bin'
   const id = crypto.randomUUID()
+  if (kind === 'avatars' || kind === 'banners') return `${kind}/${userId}/${id}.${safeExt}`
   return `${kind}/${userId}/${id}.${safeExt}`
 }
 
 export function publicUrl(bucket: string, key: string) {
+  // Cloud-hosted S3-compatible stores (R2, S3) serve public objects from a
+  // different host than the API endpoint — set MINIO_PUBLIC_ENDPOINT to that
+  // public host (e.g. "pub-xxx.r2.dev" or "bucket.s3.amazonaws.com") and it
+  // takes precedence. Unset keeps the MinIO-style endpoint:port URL.
+  const publicHost = process.env.MINIO_PUBLIC_ENDPOINT
+  if (publicHost) return `https://${publicHost.replace(/^https?:\/\//, '')}/${bucket}/${key}`
   const protocol = useSSL ? 'https' : 'http'
-  return `${protocol}://${endPoint}:${port}/${bucket}/${key}`
+  const portSuffix = useSSL && port === 443 ? '' : `:${port}`
+  return `${protocol}://${endPoint}${portSuffix}/${bucket}/${key}`
 }
 
 export async function presignUpload(bucket: string, key: string, expirySeconds = 900) {

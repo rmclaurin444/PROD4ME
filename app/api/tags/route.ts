@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
@@ -52,3 +53,4 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ tags })
 }
+

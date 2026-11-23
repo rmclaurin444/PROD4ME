@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { BUCKET_AUDIO, objectExists, presignAttachmentDownload } from '@/lib/storage'
 
@@ -45,3 +46,4 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: 'Could not prepare download' }, { status: 500 })
   }
 }
+

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { beatInclude } from '@/lib/beats'
 import {
@@ -11,7 +12,9 @@ import {
 } from '@/lib/offers'
 
 export async function GET() {
-  const session = await auth()
+  const verified = await requireVerifiedUser()
+  if (verified instanceof NextResponse) return verified
+  const session = { user: { id: verified.userId, role: verified.role } }
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -37,7 +40,9 @@ function bad(error: string, status = 400) {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
+  const verified = await requireVerifiedUser()
+  if (verified instanceof NextResponse) return verified
+  const session = { user: { id: verified.userId, role: verified.role } }
   if (!session?.user?.id) return bad('Unauthorized', 401)
   if (session.user.role !== 'ARTIST') return bad('Only artists can make offers', 403)
 
@@ -105,3 +110,4 @@ export async function POST(request: Request) {
     return bad('Could not create offer', 500)
   }
 }
+

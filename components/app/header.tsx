@@ -1,6 +1,6 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { Search, Settings } from 'lucide-react'
 import { Avatar } from '@/components/app/ui'
 import { ThemeToggleCompact } from '@/components/app/theme-toggle'
 
@@ -11,6 +11,7 @@ export function Header({
   onSelectUser,
   view,
   roleLabel,
+  onOpenSettings,
 }: {
   search: string
   setSearch: (v: string) => void
@@ -18,6 +19,7 @@ export function Header({
   onSelectUser: (user: { name: string; role: string; avatar: string }) => void
   view: string
   roleLabel: string
+  onOpenSettings: () => void
 }) {
   return (
     // The header floats over beat artwork in the feed, so its chrome keeps the
@@ -59,6 +61,14 @@ export function Header({
 
       <div className="flex items-center gap-3">
         <ThemeToggleCompact />
+        <button
+          onClick={onOpenSettings}
+          aria-label="Open settings"
+          title="Settings"
+          className="grid size-9 place-items-center rounded-full border border-white/15 bg-black/30 text-white backdrop-blur transition hover:bg-black/50"
+        >
+          <Settings size={16} />
+        </button>
         {/* scrim chip: header sits over artwork in the feed */}
         <span className="rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-black text-white backdrop-blur">
           {roleLabel}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { recordEngagementEvent } from '@/lib/recommendations/record.ts'
 
@@ -62,3 +63,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not claim license' }, { status: 500 })
   }
 }
+

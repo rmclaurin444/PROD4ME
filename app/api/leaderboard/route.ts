@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { scoreWeek, type ScoredBeat, type ScoredProducer, type LeaderboardBreakdown } from '@/lib/leaderboard/score'
 import { weekStartFor, weekLabel, parseWeekLabel, prevWeekStart } from '@/lib/leaderboard/week'
@@ -36,10 +37,9 @@ type LeaderEntry = {
 }
 
 export async function GET(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const verified = await requireVerifiedUser()
+  if (verified instanceof NextResponse) return verified
+  const session = { user: { id: verified.userId, role: verified.role, emailVerified: true } }
 
   const url = new URL(request.url)
   const kind = url.searchParams.get('kind') === 'producer' ? 'PRODUCER' : 'BEAT'
@@ -198,3 +198,4 @@ export async function GET(request: Request) {
     lastCompletedWeek: weekLabel(prevWeekStart(currentWeekStart)),
   })
 }
+

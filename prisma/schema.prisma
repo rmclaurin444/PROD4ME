@@ -63,7 +63,14 @@ model User {
   theme     String?  @default("acid")
   resetTokenHash     String?
   resetTokenExpiresAt DateTime?
+  username           String   @unique
+  phone              String?  @unique
+  emailVerifiedAt    DateTime?
+  phoneVerifiedAt    DateTime?
+  passwordChangedAt  DateTime?
+  pendingEmail       String?
 
+  verificationTokens VerificationToken[]
   interests  Tag[] @relation("UserInterests")
   events     EngagementEvent[]
 
@@ -73,6 +80,7 @@ model User {
   updatedAt DateTime @updatedAt
   beats     Beat[]
   playlists Playlist[]
+  leaderboardEntries LeaderboardSnapshot[]
   offersMade Offer[] @relation("ArtistOffers")
   offersReceived Offer[] @relation("ProducerOffers")
   payments  Payment[]
@@ -109,6 +117,7 @@ model Beat {
   licenses   License[]
   payments   Payment[]
   events     EngagementEvent[]
+  leaderboardEntries LeaderboardSnapshot[]
 
   tagVector  Unsupported("vector(256)")?
 
@@ -133,6 +142,37 @@ model Playlist {
   updatedAt   DateTime @updatedAt
 
   @@index([producerId])
+}
+
+model LeaderboardSnapshot {
+  id         String   @id @default(cuid())
+  weekStart  DateTime
+  kind       String
+  rank       Int
+  beatId     String?
+  beat       Beat?    @relation(fields: [beatId], references: [id], onDelete: SetNull)
+  producerId String?
+  producer   User?    @relation(fields: [producerId], references: [id], onDelete: SetNull)
+  score      Float
+  breakdown  Json
+  createdAt  DateTime @default(now())
+
+  @@unique([weekStart, kind, rank])
+  @@index([weekStart, kind])
+}
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  tokenHash String    @unique
+  target    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, kind])
 }
 
 model Tag {

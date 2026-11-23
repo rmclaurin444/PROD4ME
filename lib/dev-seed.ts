@@ -401,6 +401,7 @@ export async function seedDevDataset(opts: SeedOptions): Promise<SeedSummary> {
       create: {
         email: `dev-producer-${i}@prod4me.dev`,
         name: `Dev Producer ${i}`,
+        username: `dev_producer_${i}`,
         password,
         role: 'PRODUCER',
         bio: 'Dev seed producer.',
@@ -523,6 +524,7 @@ export async function seedDevDataset(opts: SeedOptions): Promise<SeedSummary> {
         data: {
           email: `dev-artist-${a}@prod4me.dev`,
           name: `Dev Artist ${a}`,
+          username: `dev_artist_${a}`,
           password,
           role: 'ARTIST',
           bio: 'Dev seed artist.',
@@ -635,6 +637,7 @@ export async function dumpAudioFile(
       create: {
         email: DUMPER_EMAIL,
         name: 'Dev Dumper',
+        username: 'dev_dumper',
         password: bcrypt.hashSync('password123', 10),
         role: 'PRODUCER',
         bio: 'Drag-and-drop dump target.',

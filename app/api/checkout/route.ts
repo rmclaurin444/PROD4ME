@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import type Stripe from 'stripe'
 import { auth } from '@/lib/auth'
+import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { getStripe, stripeConfigError } from '@/lib/stripe'
 import { finalizeCheckoutSession } from '@/lib/finalize'
@@ -229,3 +230,4 @@ export async function POST(request: Request) {
     return bad('Could not start checkout', 502)
   }
 }
+

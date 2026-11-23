@@ -63,13 +63,16 @@ export async function seedRecommendations(): Promise<void> {
 
   // producers
   const producerIds: string[] = []
+  let rIdx = 0
   for (const producer of PRODUCERS) {
+    rIdx += 1
     const user = await prisma.user.upsert({
       where: { email: producer.email },
       update: {},
       create: {
         email: producer.email,
         name: producer.name,
+        username: `rec_producer_${rIdx}`,
         password: USER_PASSWORD,
         role: 'PRODUCER',
         bio: producer.bio,
@@ -121,6 +124,7 @@ export async function seedRecommendations(): Promise<void> {
         email: spec.email,
         name: spec.name,
         password: USER_PASSWORD,
+        username: `rec_viewer_${u + 1}`,
         role: 'ARTIST',
         bio: 'Recommendation fixture artist.',
       },

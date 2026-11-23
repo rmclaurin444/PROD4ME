@@ -30,13 +30,13 @@ async function cleanupPreviousRun() {
 await cleanupPreviousRun()
 
 const producerA = await prisma.user.create({
-  data: { email: `zxA-${stamp}@test.dev`, name: 'Trap Maker A', password: 'x', role: 'PRODUCER' },
+    data: { username: `zx_u_7_mwtuyjno`, email: `zxA-${stamp}@test.dev`, name: 'Trap Maker A', password: 'x', role: 'PRODUCER' },
 })
 const producerB = await prisma.user.create({
-  data: { email: `zxB-${stamp}@test.dev`, name: 'Jazz Maker B', password: 'x', role: 'PRODUCER' },
+    data: { username: `zx_u_8_mwtuyjno`, email: `zxB-${stamp}@test.dev`, name: 'Jazz Maker B', password: 'x', role: 'PRODUCER' },
 })
 const user = await prisma.user.create({
-  data: { email: `zxU-${stamp}@test.dev`, name: 'Viewer U', password: 'x', role: 'ARTIST' },
+    data: { username: `zx_u_9_mwtuyjno`, email: `zxU-${stamp}@test.dev`, name: 'Viewer U', password: 'x', role: 'ARTIST' },
 })
 
 async function makeTag(name: string) {

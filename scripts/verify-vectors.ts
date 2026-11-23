@@ -35,7 +35,7 @@ async function main() {
   // 2) user taste vector: one user, one engagement on the target beat
   const tmpEmail = `veccheck-${Date.now()}@test.dev`
   const tmpUser = await prisma.user.create({
-    data: { email: tmpEmail, password: 'noop', name: 'VerChk', role: 'ARTIST' },
+        data: { username: `zx_u_11_mwtuyjnp`, email: tmpEmail, password: 'noop', name: 'VerChk', role: 'ARTIST' },
   })
   await prisma.engagementEvent.create({
     data: { userId: tmpUser.id, beatId: target.id, type: 'LIKE' },

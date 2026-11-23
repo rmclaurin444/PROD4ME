@@ -158,7 +158,7 @@ test('follow bonus applies and never tops 1.0', async () => {
 test('cold start below 5 events, full scoring at 5+', async () => {
   // fresh 0-event user
   const coldUser = await prisma.user.create({
-    data: { email: `zx-rec-cold-${Date.now()}@test.dev`, name: 'Zx Cold', password: 'x', role: 'ARTIST' },
+        data: { username: `zx_u_6_mwtuyjnm`, email: `zx-rec-cold-${Date.now()}@test.dev`, name: 'Zx Cold', password: 'x', role: 'ARTIST' },
   })
   const coldPage = await getFeedPage(coldUser.id)
   assert.equal(coldPage.coldStart, true, '0 events → cold start')

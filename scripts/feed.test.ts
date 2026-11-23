@@ -26,19 +26,19 @@ async function cleanupPreviousRun() {
 await cleanupPreviousRun()
 
 const producerP = await prisma.user.create({
-  data: { email: `zxP-${stamp}@test.dev`, name: 'Feed Prod', password: 'x', role: 'PRODUCER' },
+    data: { username: `zx_u_1_mwtuyjnk`, email: `zxP-${stamp}@test.dev`, name: 'Feed Prod', password: 'x', role: 'PRODUCER' },
 })
 const producerQ = await prisma.user.create({
-  data: { email: `zxQ-${stamp}@test.dev`, name: 'Feed Prod 2', password: 'x', role: 'PRODUCER' },
+    data: { username: `zx_u_2_mwtuyjnk`, email: `zxQ-${stamp}@test.dev`, name: 'Feed Prod 2', password: 'x', role: 'PRODUCER' },
 })
 const trapLover = await prisma.user.create({
-  data: { email: `zx1-${stamp}@test.dev`, name: 'Trap Viewer', password: 'x', role: 'ARTIST' },
+    data: { username: `zx_u_3_mwtuyjnk`, email: `zx1-${stamp}@test.dev`, name: 'Trap Viewer', password: 'x', role: 'ARTIST' },
 })
 const jazzLover = await prisma.user.create({
-  data: { email: `zx2-${stamp}@test.dev`, name: 'Jazz Viewer', password: 'x', role: 'ARTIST' },
+    data: { username: `zx_u_4_mwtuyjnk`, email: `zx2-${stamp}@test.dev`, name: 'Jazz Viewer', password: 'x', role: 'ARTIST' },
 })
 const freshUser = await prisma.user.create({
-  data: { email: `zx3-${stamp}@test.dev`, name: 'Matt Hatter', password: 'x', role: 'ARTIST' },
+    data: { username: `zx_u_5_mwtuyjnk`, email: `zx3-${stamp}@test.dev`, name: 'Matt Hatter', password: 'x', role: 'ARTIST' },
 })
 
 const tagTrap = await prisma.tag.create({

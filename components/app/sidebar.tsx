@@ -11,7 +11,8 @@ export function Sidebar({
   userName,
   userRole,
   onSignOut,
-  devPanel,
+  /** Admin-only: renders the /dev panel link (Analytics in prod, tools in dev). */
+  isAdmin,
 }: {
   view: View
   setView: (v: View) => void
@@ -19,8 +20,7 @@ export function Sidebar({
   userName: string
   userRole: string
   onSignOut: () => void
-  /** Dev-only: renders a link to the /dev panel (never in production). */
-  devPanel?: boolean
+  isAdmin?: boolean
 }) {
   const nav = getNav(isArtist)
 
@@ -61,7 +61,7 @@ export function Sidebar({
             Studio
           </Link>
         )}
-        {devPanel && (
+        {isAdmin && (
           <a
             href="/dev"
             className="mt-2 flex items-center gap-3 rounded-xl px-4 py-2 text-xs font-semibold text-muted-foreground/60 hover:bg-white/5 hover:text-lime-300"

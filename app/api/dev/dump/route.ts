@@ -1,12 +1,25 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { addToAudioPool, devPanelEnabled, dumpAudioFile } from '@/lib/dev-seed'
 import { MAX_AUDIO_BYTES } from '@/lib/storage'
 
-/** Dev panel routes exist only outside production (or with DEV_PANEL=1). */
-function guard(): NextResponse | null {
+/**
+ * Shared guard for dev routes:
+ *  - 404 when the dev tools are disabled (production without DEV_PANEL=1)
+ *  - 401 when logged out
+ *  - 403 for logged-in non-admins
+ */
+async function adminGuard(): Promise<NextResponse | null> {
   if (!devPanelEnabled()) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!isAdmin(session.user.email)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   return null
 }
@@ -22,13 +35,8 @@ function guard(): NextResponse | null {
  *   for the seeder to draw from later — no beat is created.
  */
 export async function POST(request: Request) {
-  const blocked = guard()
+  const blocked = await adminGuard()
   if (blocked) return blocked
-
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
 
   let form: FormData
   try {

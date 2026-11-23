@@ -49,15 +49,15 @@ export function AppShell({
   library,
   openOffers,
   producers,
-  devPanel,
+  isAdmin,
 }: {
   user: SessionUser
   beats: ShapedBeat[]
   library: ShapedLicense[]
   openOffers: number
   producers: { id: string; name: string; avatar: string | null; bio: string | null }[]
-  /** Dev-only: shows the /dev panel link in the sidebar. */
-  devPanel?: boolean
+  /** Admin-only: shows the /dev panel link in the sidebar. */
+  isAdmin?: boolean
 }) {
   const router = useRouter()
   const isArtist = user.role === 'ARTIST'
@@ -300,7 +300,7 @@ export function AppShell({
           userName={user.name}
           userRole={user.role}
           onSignOut={() => signOut({ callbackUrl: '/login' })}
-          devPanel={devPanel}
+          isAdmin={isAdmin}
         />
 
         <section className="relative flex min-h-screen min-w-0 flex-1 flex-col">

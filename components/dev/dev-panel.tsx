@@ -94,7 +94,7 @@ function uploadDumpFile(
   })
 }
 
-export function DevPanel() {
+export function DevPanel({ devTools }: { devTools: boolean }) {
   // ---- seeder state ----
   const [beats, setBeats] = useState(200)
   const [producers, setProducers] = useState(8)
@@ -249,7 +249,9 @@ export function DevPanel() {
                 DEV <span className="text-lime-300">PANEL</span>
               </h1>
               <p className="text-xs text-muted-foreground">
-                Test-data tooling — disabled in production builds.
+                {devTools
+                  ? 'Test-data tooling — disabled in production builds.'
+                  : 'Admin area — analytics only in this environment.'}
               </p>
             </div>
           </div>
@@ -262,6 +264,17 @@ export function DevPanel() {
           </Link>
         </div>
 
+        {/* ---------------- analytics (Prompt 4) ---------------- */}
+        <section className="mt-8 rounded-2xl border border-white/10 bg-white/[.03] p-6">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-lime-300">Analytics</h2>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Admin analytics for every environment — dashboards land in a follow-up update.
+          </p>
+        </section>
+
+        {/* ---------------- dev tools (seeder / purge / dump / pool) ---------------- */}
+        {devTools && (
+          <>
         {/* stats strip */}
         <div className="mt-8 grid grid-cols-3 gap-3">
           {[
@@ -532,6 +545,8 @@ export function DevPanel() {
           Purge removes only <code>dev-*</code> accounts (beats, events, offers cascade). Real accounts and
           shared genre tags are never touched.
         </p>
+          </>
+        )}
       </div>
     </div>
   )

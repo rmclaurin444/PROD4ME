@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { isAdmin } from '@/lib/admin'
 import { getBeats } from '@/lib/beats'
 import { getArtistLibrary } from '@/lib/licenses'
-import { devPanelEnabled } from '@/lib/dev-seed'
 import { AppShell } from '@/components/app/app-shell'
 
 export default async function Page() {
@@ -59,7 +59,7 @@ export default async function Page() {
       library={library}
       openOffers={ownedOffers}
       producers={producers}
-      devPanel={devPanelEnabled()}
+      isAdmin={isAdmin(user.email)}
     />
   )
 }

@@ -17,6 +17,7 @@ export type EventTypeName =
   | 'BUY'
   | 'COMMENT'
   | 'SKIP'
+  | 'SHARE'
 
 export const EVENT_WEIGHTS: Record<EventTypeName, number> = {
   PLAY_50: 1,
@@ -29,6 +30,7 @@ export const EVENT_WEIGHTS: Record<EventTypeName, number> = {
   BUY: 6,
   COMMENT: 3,
   SKIP: -2,
+  SHARE: 3,
 }
 
 export const ALL_EVENT_TYPES = Object.keys(EVENT_WEIGHTS) as EventTypeName[]

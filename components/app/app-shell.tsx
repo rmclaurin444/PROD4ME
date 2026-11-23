@@ -238,13 +238,24 @@ export function AppShell({
     const isLiked = liked.includes(beatId)
     setLiked(v => (isLiked ? v.filter(i => i !== beatId) : [...v, beatId]))
     setLikeCounts(c => ({ ...c, [beatId]: (c[beatId] ?? 0) + (isLiked ? -1 : 1) }))
-    // engagement: track only the positive action (liking), not un-liking
-    if (!isLiked) trackEvent(beatId, 'LIKE')
+    if (!isLiked) {
+      trackEvent(beatId, 'LIKE')
+    } else {
+      // unlike: remove the LIKE event so the taste vector stops favoring it
+      void fetch('/api/events', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ beatId, type: 'LIKE' }),
+      }).catch(() => {})
+    }
   }
 
   const handleShare = () => {
     if (!beatId) return
     setShareCounts(c => ({ ...c, [beatId]: (c[beatId] ?? 0) + 1 }))
+    // engagement: a share is a real signal — weight 3 (navigator share or
+    // clipboard copy both route through here via Feed)
+    trackEvent(beatId, 'SHARE')
   }
 
   const currentComments = [

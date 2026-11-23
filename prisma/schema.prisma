@@ -48,6 +48,7 @@ enum EngagementEventType {
   BUY
   COMMENT
   SKIP
+  SHARE
 }
 
 model User {

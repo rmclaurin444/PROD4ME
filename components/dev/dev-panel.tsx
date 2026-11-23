@@ -17,6 +17,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react'
+import { AnalyticsSection } from '@/components/dev/analytics-section'
 
 type SeedAccount = { email: string; role: string; interests: string[] }
 
@@ -264,13 +265,8 @@ export function DevPanel({ devTools }: { devTools: boolean }) {
           </Link>
         </div>
 
-        {/* ---------------- analytics (Prompt 4) ---------------- */}
-        <section className="mt-8 rounded-2xl border border-border bg-surface p-6">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-brand">Analytics</h2>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Admin analytics for every environment — dashboards land in a follow-up update.
-          </p>
-        </section>
+        {/* ---------------- analytics (admins, every environment) ---------------- */}
+        <AnalyticsSection />
 
         {/* ---------------- dev tools (seeder / purge / dump / pool) ---------------- */}
         {devTools && (

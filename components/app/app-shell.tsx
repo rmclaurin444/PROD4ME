@@ -135,8 +135,8 @@ export function AppShell({
   }, [library])
 
   useEffect(() => {
-    // remount the offers inbox when it opens so expired offers are re-fetched
-    if (view === 'inbox' && inboxTab === 'offers') setOffersKey(k => k + 1)
+    // remount the offers inbox when the dashboard opens so expired offers are re-fetched
+    if (view === 'dashboard' && inboxTab === 'offers') setOffersKey(k => k + 1)
   }, [view, inboxTab])
 
   // ---- personalized feed loading (server: lib/recommendations/*) -----------
@@ -359,7 +359,7 @@ export function AppShell({
                 }
                 setInboxTab('messages')
                 setProfileUser(null)
-                setView('inbox')
+                setView('dashboard')
               }}
               onBack={() => setProfileUser(null)}
             />
@@ -387,22 +387,53 @@ export function AppShell({
                 }
               }}
             />
-          ) : view === 'inbox' ? (
-            <InboxView
-              tab={inboxTab}
-              setTab={setInboxTab}
-              notifications={notifications}
-              unread={unread}
-              setUnread={setUnread}
-              messages={messages}
-              activeConversation={activeConversation}
-              setActiveConversation={setActiveConversation}
-              message={message}
-              setMessage={setMessage}
-              setMessages={setMessages}
-              role={user.role}
-              refreshKey={offersKey}
-            />
+          ) : view === 'dashboard' ? (
+            isProducer ? (
+              // consolidated producer dashboard: overview + inbox on one page
+              <div className="min-w-0 flex-1">
+                <Dashboard
+                  userName={user.name}
+                  beats={myBeats}
+                  openOffers={openOffers}
+                  playlists={playlists}
+                  onEditPrice={b => setEditPriceBeat(b)}
+                />
+                <div className="mx-auto w-full max-w-5xl px-5 pb-28 md:px-12">
+                  <InboxView
+                    tab={inboxTab}
+                    setTab={setInboxTab}
+                    notifications={notifications}
+                    unread={unread}
+                    setUnread={setUnread}
+                    messages={messages}
+                    activeConversation={activeConversation}
+                    setActiveConversation={setActiveConversation}
+                    message={message}
+                    setMessage={setMessage}
+                    setMessages={setMessages}
+                    role={user.role}
+                    refreshKey={offersKey}
+                  />
+                </div>
+              </div>
+            ) : (
+              // artists: the dashboard page is their inbox (offers, messages, notifications)
+              <InboxView
+                tab={inboxTab}
+                setTab={setInboxTab}
+                notifications={notifications}
+                unread={unread}
+                setUnread={setUnread}
+                messages={messages}
+                activeConversation={activeConversation}
+                setActiveConversation={setActiveConversation}
+                message={message}
+                setMessage={setMessage}
+                setMessages={setMessages}
+                role={user.role}
+                refreshKey={offersKey}
+              />
+            )
           ) : (
             view === 'feed' &&
               (beat ? (
@@ -470,15 +501,6 @@ export function AppShell({
           )}
 
           {view === 'upload' && <UploadView />}
-          {view === 'dashboard' && isProducer && (
-            <Dashboard
-              userName={user.name}
-              beats={myBeats}
-              openOffers={openOffers}
-              playlists={playlists}
-              onEditPrice={b => setEditPriceBeat(b)}
-            />
-          )}
           {view === 'profile' &&
             (isArtist ? (
               <ArtistProfile

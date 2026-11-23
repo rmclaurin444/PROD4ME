@@ -10,6 +10,7 @@ import { Waveform } from '@/components/app/waveform'
 import { computePeaksFromBuffer } from '@/lib/upload-client'
 import { trackEvent } from '@/lib/recommendations/track'
 import { formatMoney } from '@/lib/money'
+import { STUDIO_ENABLED } from '@/lib/studio/flags'
 
 function presetCss(id: string | null) {
   return (
@@ -404,12 +405,14 @@ export function Feed({
                   <span className="rounded-full bg-lime-300/20 px-3 py-2 text-[10px] font-black text-lime-300">
                     IN LIBRARY
                   </span>
-                  <Link
-                    href={`/studio?beat=${beat.id}`}
-                    className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
-                  >
-                    OPEN IN STUDIO
-                  </Link>
+                  {STUDIO_ENABLED && (
+                    <Link
+                      href={`/studio?beat=${beat.id}`}
+                      className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
+                    >
+                      OPEN IN STUDIO
+                    </Link>
+                  )}
                 </>
               ) : beat.price === 0 ? (
                 <>
@@ -419,12 +422,14 @@ export function Feed({
                   >
                     GET FREE
                   </button>
-                  <Link
-                    href={`/studio?beat=${beat.id}`}
-                    className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
-                  >
-                    OPEN IN STUDIO
-                  </Link>
+                  {STUDIO_ENABLED && (
+                    <Link
+                      href={`/studio?beat=${beat.id}`}
+                      className="rounded-full bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-300 hover:bg-lime-300/25"
+                    >
+                      OPEN IN STUDIO
+                    </Link>
+                  )}
                 </>
               ) : (
                 <>
@@ -440,12 +445,14 @@ export function Feed({
                   >
                     MAKE OFFER
                   </button>
-                  <Link
-                    href={`/studio?beat=${beat.id}`}
-                    className="rounded-full border border-white/25 px-3 py-2 text-[10px] font-black text-white/80 hover:bg-white/10"
-                  >
-                    TRY IN STUDIO
-                  </Link>
+                  {STUDIO_ENABLED && (
+                    <Link
+                      href={`/studio?beat=${beat.id}`}
+                      className="rounded-full border border-white/25 px-3 py-2 text-[10px] font-black text-white/80 hover:bg-white/10"
+                    >
+                      TRY IN STUDIO
+                    </Link>
+                  )}
                 </>
               )}
             </div>

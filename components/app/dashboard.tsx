@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BarChart3, ListMusic, Pencil } from 'lucide-react'
+import { BarChart3, ListMusic, Pencil, Play } from 'lucide-react'
 import { TagPills } from '@/components/app/ui'
 import { formatMoney } from '@/lib/money'
 import type { ShapedBeat } from '@/lib/beats'
 import type { ShapedPlaylist } from '@/lib/playlists'
 import { PlaylistEditor } from '@/components/app/playlist-editor'
+import { OffersInbox } from '@/components/app/offers-inbox'
 
 export function Dashboard({
   userName,
@@ -26,35 +27,47 @@ export function Dashboard({
   const router = useRouter()
   const firstName = userName.trim().split(/\s+/)[0]
 
-  const totalPlays = beats.reduce((sum, b) => sum + b.plays, 0)
-  const totalLikes = beats.reduce((sum, b) => sum + b.likes, 0)
+  const totalStreams = beats.reduce((sum, b) => sum + b.streams, 0)
   const licensedCount = beats.reduce((sum, b) => sum + b.licenseCount, 0)
+
+  const scrollToOffers = () =>
+    document.getElementById('offers-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   return (
     <div className="mx-auto w-full max-w-5xl overflow-y-auto px-5 pb-28 pt-24 md:px-12">
       <p className="text-xs font-bold uppercase tracking-widest text-brand">Producer dashboard</p>
       <h1 className="mt-2 text-4xl font-black">Good morning, {firstName}.</h1>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-3">
         <div className="rounded-2xl border border-border bg-surface p-4">
-          <p className="text-xs font-bold text-muted-foreground">Total plays</p>
-          <p className="mt-2 text-2xl font-black">{totalPlays.toLocaleString()}</p>
+          <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+            <Play size={11} fill="currentColor" /> Total streams
+          </p>
+          <p className="mt-2 text-2xl font-black">{totalStreams.toLocaleString()}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-4">
-          <p className="text-xs font-bold text-muted-foreground">Likes</p>
-          <p className="mt-2 text-2xl font-black">{totalLikes.toLocaleString()}</p>
-        </div>
-        <div className="rounded-2xl border border-brand/20 bg-brand/[.06] p-4">
-          <p className="text-xs font-bold text-muted-foreground">Open offers</p>
+        <button
+          onClick={scrollToOffers}
+          aria-label="Jump to the offers section"
+          className="rounded-2xl border border-brand/20 bg-brand/[.06] p-4 text-left"
+        >
+          <p className="text-xs font-bold text-muted-foreground">Offers</p>
           <p className="mt-2 text-2xl font-black">{openOffers}</p>
-        </div>
+          <p className="text-[11px] font-bold text-muted-foreground">waiting</p>
+        </button>
         <div className="rounded-2xl border border-border bg-surface p-4">
           <p className="text-xs font-bold text-muted-foreground">Licensed to artists</p>
           <p className="mt-2 text-2xl font-black">{licensedCount}</p>
         </div>
       </div>
 
-      <h2 className="mt-10 text-xl font-black">Your beats · {beats.length}</h2>
+      <h2 id="offers-section" className="mt-10 scroll-mt-24 text-xl font-black">
+        Offers
+      </h2>
+      {/* Mounting with the dashboard view re-fetches on every open — the old
+          offersKey remount logic in app-shell lives here now. */}
+      <OffersInbox role="PRODUCER" isArtist={false} />
+
+      <h2 className="mt-10 text-xl font-black">My Beats · {beats.length}</h2>
       <div className="mt-3 flex flex-col gap-2">
         {beats.map(b => (
           <div
@@ -128,11 +141,6 @@ export function Dashboard({
           </div>
         </>
       )}
-
-      <div className="mt-8 rounded-2xl border border-brand/20 bg-brand/[.06] p-5">
-        <TagPills tags={['dark trap', 'melodic']} onTag={() => {}} />
-        <p className="mt-4 text-lg font-black">Your #darktrap tagged beats get 2x more plays.</p>
-      </div>
 
       {editingPlaylist && (
         <PlaylistEditor

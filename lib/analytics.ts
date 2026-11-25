@@ -27,6 +27,7 @@ export type AnalyticsResult = {
     freeClaims: number
     revenueCents: number
   }
+  feedRefreshes: number
   series: { signups: DailyPoint[]; streams: DailyPoint[]; purchases: DailyPoint[] }
   topBeats: Array<{ id: string; title: string; producer: string; streams: number }>
   topProducers: Array<{ id: string; name: string; streams: number }>
@@ -38,7 +39,7 @@ export function parseRange(value: string | null): AnalyticsRange {
   return value === '7d' || value === '30d' || value === 'all' ? value : '7d'
 }
 
-function rangeStart(range: AnalyticsRange): Date | null {
+export function rangeStart(range: AnalyticsRange): Date | null {
   if (range === '7d') return new Date(Date.now() - 7 * DAY_MS)
   if (range === '30d') return new Date(Date.now() - 30 * DAY_MS)
   return null
@@ -84,7 +85,7 @@ export async function getAnalytics(
   const countOf = (type: string) =>
     engagementRows.find(row => row.type === type)?._count._all ?? 0
   const engagement = {
-    streams: countOf('PLAY_50'),
+    streams: countOf('STREAM'),
     completions: countOf('PLAY_COMPLETE'),
     likes: countOf('LIKE'),
     comments: countOf('COMMENT'),
@@ -92,7 +93,7 @@ export async function getAnalytics(
     shares: countOf('SHARE'),
   }
 
-  const [offersMade, offersAccepted, purchases, freeClaims, revenueAgg] = await Promise.all([
+  const [offersMade, offersAccepted, purchases, freeClaims, revenueAgg, feedRefreshes] = await Promise.all([
     prisma.offer.count({ where: { artist: userWhere, ...(start ? { createdAt: { gte: start } } : {}) } }),
     // acceptance = offers that reached AWAITING_PAYMENT or PAID
     prisma.offer.count({
@@ -112,6 +113,10 @@ export async function getAnalytics(
       where: { status: 'SUCCEEDED', artist: userWhere, ...(start ? { createdAt: { gte: start } } : {}) },
       _sum: { amountCents: true },
     }),
+    // lightweight Prompt 12 counter (one FeedRefresh row per refresh)
+    prisma.feedRefresh.count({
+      where: { user: userWhere, ...(start ? { createdAt: { gte: start } } : {}) },
+    }),
   ])
 
   const commerce = {
@@ -128,7 +133,7 @@ export async function getAnalytics(
     select: { createdAt: true },
   })
   const streamsRows = await prisma.engagementEvent.findMany({
-    where: { type: 'PLAY_50', user: userWhere, ...(start ? { createdAt: { gte: start } } : {}) },
+    where: { type: 'STREAM', user: userWhere, ...(start ? { createdAt: { gte: start } } : {}) },
     select: { createdAt: true },
   })
   const purchaseRows = await prisma.payment.findMany({
@@ -144,7 +149,7 @@ export async function getAnalytics(
 
   // ---- top 10 ----
   const streamEvents = await prisma.engagementEvent.findMany({
-    where: { type: 'PLAY_50', user: userWhere, ...(start ? { createdAt: { gte: start } } : {}) },
+    where: { type: 'STREAM', user: userWhere, ...(start ? { createdAt: { gte: start } } : {}) },
     select: { beatId: true },
   })
   const streamsByBeat = new Map<string, number>()
@@ -198,6 +203,7 @@ export async function getAnalytics(
     beats: { total: totalBeats, newInRange: newBeats },
     engagement,
     commerce,
+    feedRefreshes,
     series,
     topBeats,
     topProducers,

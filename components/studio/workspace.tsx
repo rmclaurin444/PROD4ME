@@ -427,7 +427,7 @@ export function Workspace({
       exclusivePriceCents: p?.exclusivePriceCents ?? null,
       exclusiveSold: p?.exclusiveSold ?? false,
       licenseCount: 0,
-      plays: 0,
+      streams: 0,
       likes: 0,
       saves: 0,
       shares: 0,

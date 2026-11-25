@@ -16,6 +16,7 @@ type AnalyticsData = {
   series: { signups: DailyPoint[]; streams: DailyPoint[]; purchases: DailyPoint[] }
   topBeats: Array<{ id: string; title: string; producer: string; streams: number }>
   topProducers: Array<{ id: string; name: string; streams: number }>
+  feedRefreshes: number
   stripeTestMode: boolean
 }
 
@@ -190,7 +191,7 @@ export function AnalyticsSection() {
               value={data.beats.total.toLocaleString()}
               sub={`+${data.beats.newInRange} uploaded`}
             />
-            <StatCard label="Streams" value={data.engagement.streams.toLocaleString()} sub="PLAY_50 events" />
+            <StatCard label="Streams" value={data.engagement.streams.toLocaleString()} sub="STREAM events" />
             <StatCard
               label="Revenue"
               value={dollars(data.commerce.revenueCents)}
@@ -204,6 +205,7 @@ export function AnalyticsSection() {
             <StatCard label="Comments" value={data.engagement.comments.toLocaleString()} />
             <StatCard label="Saves" value={data.engagement.saves.toLocaleString()} />
             <StatCard label="Shares" value={data.engagement.shares.toLocaleString()} />
+            <StatCard label="Feed refreshes" value={data.feedRefreshes.toLocaleString()} />
             <StatCard
               label="Offers"
               value={data.commerce.offersMade.toLocaleString()}

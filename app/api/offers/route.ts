@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { requireVerifiedUser } from '@/lib/auth-guards'
+import { requireVerifiedUser, requireVerifiedUserStrict } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { beatInclude } from '@/lib/beats'
 import {
@@ -14,19 +13,14 @@ import {
 export async function GET() {
   const verified = await requireVerifiedUser()
   if (verified instanceof NextResponse) return verified
-  const session = { user: { id: verified.userId, role: verified.role } }
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const role = session.user.role
+  const role = verified.role
   if (role !== 'ARTIST' && role !== 'PRODUCER') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   await expireStaleOffers()
   const offers = await prisma.offer.findMany({
-    where: role === 'PRODUCER' ? { producerId: session.user.id } : { artistId: session.user.id },
+    where: role === 'PRODUCER' ? { producerId: verified.userId } : { artistId: verified.userId },
     orderBy: { createdAt: 'desc' },
     take: 100,
     include: { beat: true, artist: true, producer: true },
@@ -40,10 +34,10 @@ function bad(error: string, status = 400) {
 }
 
 export async function POST(request: Request) {
-  const verified = await requireVerifiedUser()
+  // Prompt: purchase funnel — unverified accounts can browse but not transact
+  const verified = await requireVerifiedUserStrict()
   if (verified instanceof NextResponse) return verified
   const session = { user: { id: verified.userId, role: verified.role } }
-  if (!session?.user?.id) return bad('Unauthorized', 401)
   if (session.user.role !== 'ARTIST') return bad('Only artists can make offers', 403)
 
   let body: { beatId?: string; licenseType?: string; amount?: unknown; message?: unknown }

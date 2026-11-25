@@ -31,6 +31,9 @@ before(async () => {
   await seedRecommendations()
   recUsers = await prisma.user.findMany({
     where: { email: { startsWith: 'rec-' } },
+    // deterministic order: index-based access below (recUsers[0]) must not
+    // depend on Postgres scan order
+    orderBy: { email: 'asc' },
     select: { id: true, email: true },
   })
   // alternatively ensure the Taste-touched Beats keep vectors warm:
@@ -188,9 +191,14 @@ test('tag feeds are tag-pure, no explore slots', async () => {
   const technoTag = await prisma.tag.findUnique({ where: { name: 'rec-techno' } })
   assert.ok(technoTag, 'seed created rec-techno')
 
-  const tagFeed = await getFeedPage(recUsers[0]!.id, { tag: 'rec-techno' })
+  const tagFeed = await getFeedPage(recUsers.find(u => /^rec-[a]@/.test(u.email))!.id, { tag: 'rec-techno' })
   assert.ok(tagFeed.beats.length > 0, 'the tag feed is populated')
-  assert.ok(tagFeed.beats.length <= 5, 'only the 5 seeded techno beats exist')
+  // pool bound derived from the DB (the seed pairs tags across groups, so a
+  // tag's pool is 5 own-group + 2 neighbor-group beats; the viewer owns none)
+  const technoPool = await prisma.beat.count({
+    where: { tags: { some: { name: 'rec-techno' } }, producerId: { not: recUsers.find(u => /^rec-[a]@/.test(u.email))!.id } },
+  })
+  assert.ok(tagFeed.beats.length <= technoPool, `only techno-pool beats exist (${tagFeed.beats.length} <= ${technoPool})`)
   for (const beat of tagFeed.beats) {
     assert.ok(
       beat.tags.includes('rec-techno'),

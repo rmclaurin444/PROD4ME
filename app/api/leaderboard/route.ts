@@ -31,7 +31,7 @@ async function scoreCached(weekStart: Date, excludeDev: boolean) {
 type LeaderEntry = {
   rank: number
   score: number
-  breakdown: { streams: number; likes: number; comments: number; shares: number; purchases: number }
+  breakdown: { streams: number; likes: number; comments: number; shares: number; saves: number; purchases: number }
   beat: ShapedBeat | null
   producer: { id: string; name: string; avatar: string } | null
 }
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
       entries = top
         .map((entry, index) => ({
           rank: index + 1,
-          score: Math.round(entry.score * 1000) / 1000,
+          score: Math.round(entry.score),
           breakdown: entry.breakdown,
           beat: shaped.get(entry.beatId) ?? null,
           producer: null as LeaderEntry['producer'],
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
           if (!row) return null
           const result: LeaderEntry = {
             rank: index + 1,
-            score: Math.round(entry.score * 1000) / 1000,
+            score: Math.round(entry.score),
             breakdown: entry.breakdown,
             beat: null,
             producer: {
@@ -126,11 +126,11 @@ export async function GET(request: Request) {
         const rank = list.findIndex(entry => (kind === 'BEAT' ? entry.producerId === session.user.id : entry.producerId === session.user.id)) + 1
         mine = {
           rank: rank > 0 ? rank : null,
-          score: Math.round(found.score * 1000) / 1000,
+          score: Math.round(found.score),
           breakdown: found.breakdown,
         }
       } else {
-        mine = { rank: null, score: 0, breakdown: { streams: 0, likes: 0, comments: 0, shares: 0, purchases: 0 } }
+        mine = { rank: null, score: 0, breakdown: { streams: 0, likes: 0, comments: 0, shares: 0, saves: 0, purchases: 0 } }
       }
     }
   } else {

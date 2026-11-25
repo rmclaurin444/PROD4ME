@@ -10,6 +10,9 @@ import type { ShapedBeat } from '@/lib/beats'
 import type { ShapedLicense } from '@/lib/offers'
 import type { ShapedPlaylist } from '@/lib/playlists'
 import { PurchaseModal } from '@/components/app/purchase-modal'
+import { OffersInbox } from '@/components/app/offers-inbox'
+import { BeatCover } from '@/components/app/beat-cover'
+import { BeatGrid } from '@/components/app/beat-grid'
 
 export function ProducerProfile({
   onEdit,
@@ -21,7 +24,10 @@ export function ProducerProfile({
   avatarUrl,
   beats,
   playlists = [],
-  onEditPrice,
+  followerCount = 0,
+  followingCount = 0,
+  onOpenBeat,
+  onUpload,
 }: {
   onEdit: () => void
   banner: string
@@ -32,11 +38,18 @@ export function ProducerProfile({
   avatarUrl?: string | null
   beats?: ShapedBeat[]
   playlists?: ShapedPlaylist[]
-  onEditPrice?: (beat: ShapedBeat) => void
+  followerCount?: number
+  followingCount?: number
+  /** opens the owner preview (Prompt 10) — the Feed as listeners see it, with insights */
+  onOpenBeat?: (beatId: string) => void
+  /** jumps to the Upload view (owner empty state) */
+  onUpload?: () => void
 }) {
   const router = useRouter()
   const [openPlaylistId, setOpenPlaylistId] = useState<string | null>(null)
   const [purchase, setPurchase] = useState<{ beat: ShapedBeat } | null>(null)
+  const [profileTab, setProfileTab] = useState<'beats' | 'playlists'>('beats')
+  const inPlaylistIds = new Set(playlists.flatMap(playlist => playlist.beats.map(beat => beat.id)))
   return (
     <div className="mx-auto w-full max-w-5xl overflow-y-auto px-5 pb-28 pt-24 md:px-12">
       <div className="aspect-[3/1] w-full rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${banner})` }} />
@@ -50,6 +63,10 @@ export function ProducerProfile({
 
       <h1 className="mt-4 text-4xl font-black">{userName}</h1>
       <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{bio}</p>
+      <p className="mt-3 text-sm font-bold text-muted-foreground">
+        <b className="text-foreground">{followerCount.toLocaleString()}</b> followers ·{' '}
+        <b className="text-foreground">{followingCount.toLocaleString()}</b> following
+      </p>
       <span
         className="mt-5 inline-block rounded-full px-3 py-1 text-xs font-black text-brand-foreground"
         style={{ background: theme.accent }}
@@ -57,10 +74,51 @@ export function ProducerProfile({
         Producer
       </span>
 
-      {playlists.length > 0 && (
+      {/* Beats | Playlists tabs (Prompt 10: TikTok-style grid) */}
+      <div className="mt-10 flex rounded-xl border border-border bg-surface p-1">
+        {(['beats', 'playlists'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setProfileTab(tab)}
+            aria-pressed={profileTab === tab}
+            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-black ${
+              profileTab === tab ? 'bg-brand text-brand-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            {tab === 'beats' ? 'Beats' : 'Playlists'}
+          </button>
+        ))}
+      </div>
+
+      {profileTab === 'beats' ? (
         <>
-          <h2 className="mt-10 text-xl font-black">Playlists · {playlists.length}</h2>
-          <div className="mt-3 flex flex-col gap-3">
+          <div className="mt-4">
+            <BeatGrid
+              beats={beats ?? []}
+              onOpenBeat={beatId => onOpenBeat?.(beatId)}
+              inPlaylistIds={inPlaylistIds}
+              emptyState={
+                <div className="rounded-3xl border border-dashed border-border py-16 text-center">
+                  <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-surface-2 text-brand">
+                    <Plus size={24} />
+                  </div>
+                  <h3 className="mt-4 text-xl font-black">Post your first beat</h3>
+                  <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
+                    Upload a track with artwork, tags and pricing — it shows up here and in the feed.
+                  </p>
+                  {onUpload && (
+                    <Button onClick={onUpload} className="mt-5 bg-brand text-brand-foreground">
+                      Upload a beat
+                    </Button>
+                  )}
+                </div>
+              }
+            />
+          </div>
+        </>
+      ) : playlists.length > 0 ? (
+        <>
+          <div className="mt-4 flex flex-col gap-3">
             {playlists.map(playlist => {
               const isOpen = openPlaylistId === playlist.id
               return (
@@ -74,9 +132,13 @@ export function ProducerProfile({
                     className="flex w-full items-center gap-3 text-left"
                   >
                     {playlist.artUrl ? (
-                      <img src={playlist.artUrl} alt="" className="size-12 rounded-xl object-cover" />
-                    ) : playlist.artPreset ? null : null}
-                    {!playlist.artUrl && (
+                      <BeatCover
+                        artUrl={playlist.artUrl}
+                        artPreset={playlist.artPreset}
+                        title={playlist.title}
+                        className="relative size-12 rounded-xl"
+                      />
+                    ) : (
                       <div className="grid size-12 place-items-center rounded-xl bg-surface-2">
                         <ListMusic size={18} className="text-brand" />
                       </div>
@@ -103,13 +165,12 @@ export function ProducerProfile({
                           <span className="w-5 text-center text-xs font-black tabular-nums text-muted-foreground">
                             {index + 1}
                           </span>
-                          {beat.artUrl ? (
-                            <img src={beat.artUrl} alt="" className="size-10 rounded-lg object-cover" />
-                          ) : playlist.artUrl ? (
-                            <img src={playlist.artUrl} alt="" className="size-10 rounded-lg object-cover" />
-                          ) : (
-                            <div className="size-10 rounded-lg bg-surface-2" />
-                          )}
+                          <BeatCover
+                            artUrl={beat.artUrl}
+                            artPreset={beat.artPreset}
+                            title={beat.title}
+                            className="relative size-10 rounded-lg"
+                          />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-black">{beat.title}</p>
                             <p className="text-xs text-muted-foreground">
@@ -144,42 +205,8 @@ export function ProducerProfile({
             })}
           </div>
         </>
-      )}
-
-      {onEditPrice && beats && beats.length > 0 && (
-        <>
-          <h2 className="mt-10 text-xl font-black">Beats & pricing</h2>
-          <div className="mt-3 flex flex-col gap-2">
-            {beats.map(b => (
-              <div
-                key={b.id}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-black">{b.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {b.price === 0 ? (
-                      <span className="rounded-full bg-brand px-2 py-0.5 font-black text-brand-foreground">FREE</span>
-                    ) : (
-                      `$${b.price}`
-                    )}
-                    {b.exclusivePriceCents !== null && !b.exclusiveSold && (
-                      <> · Exclusive {formatMoney(b.exclusivePriceCents)}</>
-                    )}
-                    {b.exclusiveSold ? ' · Exclusive: sold' : ` · licensed to ${b.licenseCount} artists`}
-                  </p>
-                </div>
-                <button
-                  onClick={() => onEditPrice(b)}
-                  aria-label={`Set pricing for ${b.title}`}
-                  className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-[10px] font-black"
-                >
-                  <Pencil size={12} /> PRICE
-                </button>
-              </div>
-            ))}
-          </div>
-        </>
+      ) : (
+        <p className="mt-4 text-sm text-muted-foreground">No playlists yet.</p>
       )}
 
       {purchase && (
@@ -282,6 +309,13 @@ export function ArtistProfile({
         ))}
       </div>
 
+      <h2 id="offers-section" className="mt-10 scroll-mt-24 text-xl font-black">
+        Offers
+      </h2>
+      {/* Mounting with the profile view re-fetches on every open — the old
+          offersKey remount logic in app-shell lives here now. */}
+      <OffersInbox role="ARTIST" isArtist />
+
       <h2 className="mt-10 text-xl font-black">My Library · {library?.length ?? 0} licenses</h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {(library ?? []).map(license => (
@@ -289,9 +323,12 @@ export function ArtistProfile({
             key={license.id}
             className="flex items-center gap-3 rounded-2xl border border-brand/20 bg-brand/[.05] p-3"
           >
-            {license.beat.artUrl && (
-              <img src={license.beat.artUrl} alt="" className="size-14 rounded-xl object-cover" />
-            )}
+            <BeatCover
+              artUrl={license.beat.artUrl}
+              artPreset={license.beat.artPreset}
+              title={license.beat.title}
+              className="relative size-14 rounded-xl"
+            />
             <div className="min-w-0 flex-1">
               <p className="font-black">{license.beat.title}</p>
               <p className="text-xs text-muted-foreground">
@@ -334,3 +371,4 @@ export function ArtistProfile({
     </div>
   )
 }
+

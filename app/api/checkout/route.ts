@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import type Stripe from 'stripe'
 import { auth } from '@/lib/auth'
-import { requireVerifiedUser } from '@/lib/auth-guards'
+import { requireVerifiedUserStrict } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { getStripe, stripeConfigError } from '@/lib/stripe'
 import { finalizeCheckoutSession } from '@/lib/finalize'
@@ -57,8 +57,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return bad('Unauthorized', 401)
+  const verified = await requireVerifiedUserStrict()
+  if (verified instanceof NextResponse) return verified
+  const session = { user: { id: verified.userId, role: verified.role } }
   if (session.user.role !== 'ARTIST') return bad('Only artists can purchase licenses', 403)
 
   const stripe = getStripe()

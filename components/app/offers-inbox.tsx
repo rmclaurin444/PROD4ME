@@ -34,6 +34,21 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
   const [counterAmount, setCounterAmount] = useState('')
   const [counterMessage, setCounterMessage] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<'waiting' | 'completed' | 'closed'>('waiting')
+
+  const FILTERS = [
+    { id: 'waiting', label: 'Waiting' },
+    { id: 'completed', label: 'Completed' },
+    { id: 'closed', label: 'Closed' },
+  ] as const
+
+  const filteredOffers = (offers ?? []).filter(offer => {
+    if (filter === 'waiting') {
+      return offer.status === 'PENDING' || offer.status === 'COUNTERED' || offer.status === 'AWAITING_PAYMENT'
+    }
+    if (filter === 'completed') return offer.status === 'PAID'
+    return offer.status === 'DECLINED' || offer.status === 'EXPIRED'
+  })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -104,24 +119,50 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
 
   return (
     <div className="mt-4 flex flex-col gap-3">
+      <div className="flex gap-2 rounded-xl bg-surface p-1">
+        {FILTERS.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`flex-1 rounded-lg px-3 py-2 text-xs font-black ${
+              filter === f.id ? 'bg-brand text-brand-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {loading && offers === null && (
         <p className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
           <Loader2 className="animate-spin" size={16} /> Loading offers…
         </p>
       )}
 
-      {offers && offers.length === 0 && (
+      {offers && filteredOffers.length === 0 && (
         <div className="rounded-2xl border border-border bg-surface p-6 text-center">
-          <p className="font-black">{isArtist ? 'No offers yet' : 'No incoming offers yet'}</p>
+          <p className="font-black">
+            {filter === 'waiting'
+              ? isArtist
+                ? 'No offers yet'
+                : 'No incoming offers yet'
+              : filter === 'completed'
+                ? 'No completed offers yet'
+                : 'Nothing closed yet'}
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            {isArtist
-              ? 'Make offers from the feed to start negotiating.'
-              : 'When artists make offers on your beats they show up here.'}
+            {filter === 'waiting'
+              ? isArtist
+                ? 'Make offers from the feed to start negotiating.'
+                : 'When artists make offers on your beats they show up here.'
+              : filter === 'completed'
+                ? 'Accepted and paid offers land here.'
+                : 'Declined and expired offers land here.'}
           </p>
         </div>
       )}
 
-      {(offers ?? []).map(offer => {
+      {filteredOffers.map(offer => {
         const waiting = offer.status === 'PENDING' || offer.status === 'COUNTERED' || offer.status === 'AWAITING_PAYMENT'
         const expired = offer.status === 'EXPIRED'
         const isProducer = role === 'PRODUCER'

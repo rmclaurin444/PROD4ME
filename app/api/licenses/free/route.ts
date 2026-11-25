@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
-import { auth } from '@/lib/auth'
-import { requireVerifiedUser } from '@/lib/auth-guards'
+import { requireVerifiedUserStrict } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { recordEngagementEvent } from '@/lib/recommendations/record.ts'
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const verified = await requireVerifiedUserStrict()
+  if (verified instanceof NextResponse) return verified
+  const session = { user: { id: verified.userId, role: verified.role } }
   if (session.user.role !== 'ARTIST') {
     return NextResponse.json({ error: 'Only artists can claim free beats' }, { status: 403 })
   }

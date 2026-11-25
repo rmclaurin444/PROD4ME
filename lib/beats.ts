@@ -21,7 +21,7 @@ export type ShapedBeat = {
   exclusivePriceCents: number | null
   exclusiveSold: boolean
   licenseCount: number
-  plays: number
+  streams: number
   likes: number
   saves: number
   shares: number
@@ -31,6 +31,8 @@ export type ShapedBeat = {
   artPreset: string | null
   peaks: number[] | null
   audioUrl: string
+  /** Prompt 13: Following feed only — posted after the user's last visit */
+  isNew?: boolean
 }
 
 export type BeatWithRelations = Prisma.BeatGetPayload<{ include: typeof beatInclude }>
@@ -52,7 +54,7 @@ export async function shapeBeat(beat: BeatWithRelations): Promise<ShapedBeat> {
     exclusivePriceCents: beat.exclusivePriceCents,
     exclusiveSold: beat.exclusiveSold,
     licenseCount: beat._count.licenses,
-    plays: beat.plays,
+    streams: beat.streams,
     likes: beat.likes,
     saves: beat.saves,
     shares: beat.shares,
@@ -93,7 +95,7 @@ export async function getBeats(take = 50, interestNames: string[] = []): Promise
   return shaped
 }
 
-export function formatPlays(n: number) {
+export function formatStreams(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`
   return String(n)

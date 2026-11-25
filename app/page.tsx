@@ -25,11 +25,12 @@ export default async function Page() {
     redirect('/login')
   }
 
-  // Real producer directory for search results + producer pages (an empty
-  // `users` mock array with fabricated follower counts lives no longer).
+  // Real producer directory for the leaderboard/feed profile shortcuts (the
+  // old mock `users` array with fabricated follower counts is gone — header
+  // search hits GET /api/users/search).
   const producers = await prisma.user.findMany({
     where: { role: 'PRODUCER' },
-    select: { id: true, name: true, avatar: true, bio: true },
+    select: { id: true, name: true, username: true, avatar: true, bio: true },
     orderBy: { name: 'asc' },
   })
 
@@ -50,6 +51,12 @@ export default async function Page() {
 
   const playlists = user.role === 'PRODUCER' ? await getProducerPlaylists(user.id) : []
 
+  // Prompt 13: own profile follow counts (producer profile header)
+  const [followerCount, followingCount] = await Promise.all([
+    prisma.follow.count({ where: { followingId: user.id } }),
+    prisma.follow.count({ where: { followerId: user.id } }),
+  ])
+
   return (
     <AppShell
       user={{
@@ -61,6 +68,8 @@ export default async function Page() {
         banner: bannerUrl ?? user.banner,
         theme: user.theme,
         avatar: avatarUrl ?? user.avatar,
+        followerCount,
+        followingCount,
       }}
       beats={beats}
       library={library}

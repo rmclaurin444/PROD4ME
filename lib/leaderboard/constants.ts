@@ -4,10 +4,11 @@
  * vectors.
  */
 export const LEADERBOARD_WEIGHTS = {
-  stream: 1,
+  stream: 0.2,
   like: 3,
   comment: 4,
   share: 4,
+  save: 2,
   purchase: 10,
   freeClaim: 2,
 } as const

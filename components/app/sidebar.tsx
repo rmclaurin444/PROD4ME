@@ -14,6 +14,8 @@ export function Sidebar({
   onSignOut,
   /** Admin-only: renders the /dev panel link (Analytics in prod, tools in dev). */
   isAdmin,
+  /** Unread notification count, shown on the nav item that opens the inbox. */
+  unread = 0,
 }: {
   view: View
   setView: (v: View) => void
@@ -22,6 +24,7 @@ export function Sidebar({
   userRole: string
   onSignOut: () => void
   isAdmin?: boolean
+  unread?: number
 }) {
   const nav = getNav(isArtist)
 
@@ -49,6 +52,11 @@ export function Sidebar({
           >
             <Icon size={19} />
             {label}
+            {id === 'dashboard' && unread > 0 && (
+              <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-black text-foreground">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
           </button>
         ))}
         {/* Studio lives on its own protected route (/studio) — rendered as a
@@ -94,10 +102,12 @@ export function MobileNav({
   view,
   setView,
   isArtist,
+  unread = 0,
 }: {
   view: View
   setView: (v: View) => void
   isArtist: boolean
+  unread?: number
 }) {
   const nav = getNav(isArtist)
 
@@ -109,7 +119,14 @@ export function MobileNav({
           onClick={() => setView(id)}
           className="flex flex-col items-center gap-1 text-[10px] font-bold"
         >
-          <Icon size={19} />
+          <span className="relative">
+            <Icon size={19} />
+            {id === 'dashboard' && unread > 0 && (
+              <span className="absolute -right-2 -top-1.5 grid min-w-4 place-items-center rounded-full bg-brand px-1 text-[9px] font-black text-brand-foreground">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
+          </span>
           <span>{label}</span>
         </button>
       ))}

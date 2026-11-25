@@ -162,3 +162,19 @@
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 button { transition: transform 160ms ease, background-color 160ms ease, color 160ms ease; }
 button:active { transform: scale(.97); }
+
+/* Feed navigation (Prompt 12): short directional slide, skipped when the
+   user prefers reduced motion. */
+@keyframes feed-slide-next {
+  from { transform: translateY(56px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes feed-slide-prev {
+  from { transform: translateY(-56px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.feed-slide-next { animation: feed-slide-next 250ms ease-out; }
+.feed-slide-prev { animation: feed-slide-prev 250ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .feed-slide-next, .feed-slide-prev { animation: none; }
+}

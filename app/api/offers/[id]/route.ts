@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { requireVerifiedUser } from '@/lib/auth-guards'
+import { requireVerifiedUserStrict } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import {
   WAITING_OFFER_STATUSES,
@@ -18,8 +17,10 @@ function bad(error: string, status = 400) {
 }
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) return bad('Unauthorized', 401)
+  // Prompt: offer actions are part of the purchase funnel — verified only
+  const verified = await requireVerifiedUserStrict()
+  if (verified instanceof NextResponse) return verified
+  const session = { user: { id: verified.userId, role: verified.role } }
   if (session.user.role !== 'PRODUCER' && session.user.role !== 'ARTIST') {
     return bad('Forbidden', 403)
   }

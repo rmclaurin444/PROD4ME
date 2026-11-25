@@ -97,17 +97,24 @@ If a producer skips artwork upload, `artPreset` stores one of 6 built-in gradien
 
 ### Prerequisites
 
-- Node.js + [pnpm](https://pnpm.io)
-- Docker Desktop (for MinIO)
-- A local PostgreSQL instance
+- **Node.js 20+** — [download here](https://nodejs.org) (LTS is fine)
+- **pnpm** — install with `corepack enable` then `corepack prepare pnpm@latest --activate`, or `npm install -g pnpm`
+- **Docker Desktop** — [download here](https://www.docker.com/products/docker-desktop/) (runs PostgreSQL + MinIO, recommended path)
+- That's it — the database and object storage both run in Docker below. If you'd rather install PostgreSQL natively, see [Running PostgreSQL without Docker](#running-postgresql-without-docker).
 
 ### 1. Environment variables
 
-Create a `.env` file in the project root (gitignored):
+Copy the template and fill in the secret:
 
 ```bash
-DATABASE_URL="postgresql://<user>:<password>@localhost:5432/prod4me"
-AUTH_SECRET="<generate with: openssl rand -base64 32>"
+cp .env.example .env
+```
+
+Then edit `.env` and set `AUTH_SECRET` (any random string; generate one with `openssl rand -base64 32` — on Windows, run that in Git Bash, or just paste any long random string). The defaults for Postgres and MinIO match `docker-compose.yml`, so nothing else needs to change. The resulting file should look like:
+
+```bash
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/prod4me"
+AUTH_SECRET="<a long random string>"
 
 # Optional — defaults shown match docker-compose.yml
 MINIO_ENDPOINT=localhost
@@ -119,24 +126,76 @@ MINIO_BUCKET_AUDIO=beat-audio
 MINIO_BUCKET_ARTWORK=beat-artwork
 ```
 
+`STRIPE_SECRET_KEY` (test mode) is optional — without it, paid checkout is disabled but everything else works.
+
+> **Note:** the database **must have the [pgvector](https://github.com/pgvector/pgvector) extension** — the recommendation system stores 256-dimension tag/taste vectors (see the `add_pgvector_tag_vectors` migration). A plain vanilla Postgres will fail on `prisma migrate deploy`. The Docker image below (`pgvector/pgvector:pg17`) ships with it preinstalled; for native installs, see the per-OS notes.
+
 ### 2. Install dependencies
 
 ```bash
 pnpm install
 ```
 
-### 3. Start object storage
+### 3. Start PostgreSQL + object storage
 
 ```bash
 docker compose up -d
 ```
 
-This starts MinIO (API on `:9000`, console on `:9001`) and an init container that creates the `beat-audio` (private) and `beat-artwork` (public-read) buckets.
+This starts:
+
+| Service | Container | What it runs |
+|---|---|---|
+| PostgreSQL 17 + pgvector | `prod4me-postgres` | DB `prod4me`, user `postgres`, password `postgres` — port **5432** |
+| MinIO | `prod4me-minio` | S3 API on **:9000**, console on **:9001** |
+| MinIO init | `prod4me-minio-init` | one-shot: creates the `beat-audio` (private) and `beat-artwork` (public-read) buckets |
+
+Verify it's healthy:
+
+```bash
+docker compose ps          # postgres + minio should show "healthy"
+docker compose logs minio-init   # should say "MinIO initialized: buckets created..."
+```
+
+#### Running PostgreSQL without Docker
+
+If you prefer a native PostgreSQL install (or can't use Docker for it), install **PostgreSQL 15+ plus the pgvector extension**, create the database, and point `DATABASE_URL` at it. Install/start commands per OS:
+
+**macOS (Homebrew)**
+
+```bash
+brew install pgvector
+brew services start postgresql@17      # starts now + on login; use `stop` to stop
+createdb prod4me                       # pgvector is available to CREATE EXTENSION immediately
+```
+
+**Windows** — install [PostgreSQL](https://www.postgresql.org/download/windows/) (the EDB installer), then the [pgvector Windows build](https://github.com/pgvector/pgvector#windows) (`nmake /f Makefile` needs VS Build Tools, or copy prebuilt DLLs). Alternatively use WSL2: `sudo apt install postgresql-17 pgvector...`. Start it and set it to auto-run:
+
+```powershell
+# Start / stop / auto-start the "postgresql-x64-17" Windows service:
+net start postgresql-x64-17
+net stop  postgresql-x64-17
+sc config postgresql-x64-17 start=auto
+# Create the database (run in PowerShell, postgres superuser):
+& "C:\Program Files\PostgreSQL\17\bin\createdb.exe" -U postgres prod4me
+```
+
+**Linux (Debian/Ubuntu)**
+
+```bash
+sudo apt install postgresql postgresql-contrib postgresql-17-pgvector  # package name varies; pgvector is in PGDG repos
+sudo systemctl enable --now postgresql    # starts now + on boot
+sudo -u postgres createdb prod4me
+```
+
+Then update `.env` with your local credentials, e.g. `DATABASE_URL="postgresql://postgres:<your-password>@localhost:5432/prod4me"`, and run the migration — it will run `CREATE EXTENSION vector` itself. If it errors with `could not open extension control file .../vector.control`, pgvector isn't installed for that Postgres — that's the error to fix before continuing.
+
+**Where the data lives:** Docker stores it in the `postgres-data` named volume (survives `docker compose down`; wiped only by `docker compose down -v`). Native installs store it in the standard data directory per OS.
 
 ### 4. Set up the database
 
 ```bash
-pnpm exec prisma migrate deploy   # apply migrations
+pnpm exec prisma migrate deploy   # apply migrations (also enables the pgvector extension)
 pnpm seed                          # optional: seed demo producers + beats
 ```
 
@@ -165,6 +224,85 @@ Seeded beats reference placeholder audio keys that don't exist in MinIO, so they
 | `pnpm build` | Production build |
 | `pnpm start` | Start the production server (after `build`) |
 | `pnpm seed` | Seed demo producers, beats, and tags |
+| `pnpm seed:dump` | Seed the full recommendation demo dataset |
+| `pnpm seed:dump:clean` | Wipe the recommendation demo dataset |
+| `pnpm exec prisma migrate deploy` | Apply pending DB migrations |
+| `pnpm exec prisma studio` | Browse the database in a local web UI |
+
+## Deploying to Vercel
+
+You don't need any of the local setup above to use the app in production — Vercel hosts the Next.js app, a cloud Postgres holds the data, and Cloudflare R2 holds the files. Everything below is a one-time setup; after that, **every push to GitHub redeploys automatically**, so you can edit from GitHub's web editor, this laptop, or any machine.
+
+Architecture: **Vercel** (Next.js app + API routes) → **Neon** (serverless Postgres with pgvector) and **Cloudflare R2** (S3-compatible file storage). Files still go browser → presigned URL → R2 directly, never through the server.
+
+You'll need free accounts on [Vercel](https://vercel.com), [GitHub](https://github.com), [Cloudflare](https://dash.cloudflare.com/sign-up), and — optionally — [Stripe](https://stripe.com).
+
+### 1. Push the repo to GitHub
+
+```bash
+git remote add origin https://github.com/<you>/prod4me.git
+git push -u origin main
+```
+
+### 2. Provision the database (Neon)
+
+Easiest: in the Vercel dashboard → your project → **Storage** → create a **Neon** database. Neon supports pgvector (your migrations enable it automatically) and Vercel injects `DATABASE_URL` for you. Alternatively create it directly at [neon.tech](https://neon.tech) and copy the **pooled** connection string yourself.
+
+Run the migrations and optional seed from this laptop against the cloud DB:
+
+```bash
+DATABASE_URL="<neon pooled connection string>" pnpm exec prisma migrate deploy
+DATABASE_URL="<neon pooled connection string>" pnpm seed    # demo accounts + beats
+```
+
+### 3. Create R2 buckets (Cloudflare)
+
+In the Cloudflare dashboard → **R2**:
+
+1. Create two buckets: `beat-audio` and `beat-artwork`.
+2. On `beat-artwork`: Settings → **Public access** → connect the `r2.dev` subdomain (e.g. `pub-abc123.r2.dev`) — this is what serves artwork images.
+3. `beat-audio` stays private; audio is served via short-lived presigned URLs.
+4. On **both** buckets: Settings → CORS policy — the browser must be allowed to PUT/GET cross-origin:
+
+   ```json
+   [
+     {
+       "AllowedOrigins": ["http://localhost:3000", "https://<your-app>.vercel.app"],
+       "AllowedMethods": ["GET", "PUT"],
+       "AllowedHeaders": ["*"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+5. Account-level: **R2 → Manage API tokens** → create a token with *Object Read & Write* scoped to these buckets. You get an Access Key ID + Secret (S3 credentials) and the account-specific endpoint: `https://<accountid>.r2.cloudflarestorage.com`.
+
+### 4. Deploy on Vercel
+
+Dashboard → **Add New… → Project** → import the GitHub repo → set Environment Variables (all environments):
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Neon pooled connection string (auto-set if provisioned via Vercel Storage) |
+| `AUTH_SECRET` | `openssl rand -base64 32` — **different from local** is fine, but changing it invalidates existing sessions |
+| `MINIO_ENDPOINT` | `<accountid>.r2.cloudflarestorage.com` (no scheme) |
+| `MINIO_PORT` | `443` |
+| `MINIO_USE_SSL` | `true` |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | R2 API token credentials |
+| `MINIO_BUCKET_AUDIO` / `MINIO_BUCKET_ARTWORK` | `beat-audio` / `beat-artwork` |
+| `MINIO_PUBLIC_ENDPOINT` | `pub-<hash>.r2.dev` — the artwork public host from step 3 |
+| `STRIPE_SECRET_KEY` | optional — live/test key to enable paid checkout |
+| `STRIPE_WEBHOOK_SECRET` | optional — see below |
+
+Deploy. If the region picker is available, choose the region nearest your Neon database to keep DB round-trips fast.
+
+### 5. Stripe webhook (if using payments)
+
+Stripe dashboard → Developers → Webhooks → add endpoint `https://<your-app>.vercel.app/api/webhooks/stripe` (checkout.session.completed) → copy the signing secret into `STRIPE_WEBHOOK_SECRET`, then redeploy.
+
+### 6. Editing after launch
+
+Push to `main` → Vercel redeploys (preview URLs are generated for every branch/PR too). Schema changes: edit `prisma/schema.prisma`, run `pnpm exec prisma migrate dev` locally against your dev DB, commit the migration folder, then run `prisma migrate deploy` against Neon before/with the deploy.
 
 ## Project Structure
 
@@ -194,7 +332,7 @@ prisma/
   seed.mjs
 
 proxy.ts                       Route protection (Next.js 16's middleware.ts replacement)
-docker-compose.yml              MinIO service definitions
+docker-compose.yml              PostgreSQL (pgvector) + MinIO service definitions
 ```
 
 ## Recommendation Algorithm
@@ -247,6 +385,18 @@ New users (fewer than `COLD_START_MIN_EVENTS` = 5 events) are ranked by **popula
 ### Tuning
 
 Open `lib/recommendations/constants.ts` — `EVENT_WEIGHTS`, `DECAY_HALF_LIFE_DAYS`, `EVENT_WINDOW_DAYS`, `VECTOR_DIM`, `SCORE_WEIGHTS`, `FOLLOW_BONUS`, `FEED_PAGE_SIZE` / `FEED_RANKED_SLOTS` / `FEED_EXPLORE_SLOTS`, `COLD_START_MIN_EVENTS`, `SEEN_EXCLUSION_DAYS`, `RECENCY_ZERO_DAYS`, `CANDIDATE_LIMIT`, and `SKIP_UNDER_MILLIS` — change, save, reload. Verification suites live in `scripts/*.test.ts` (`node --env-file=.env --test scripts/rec.test.ts`) and the demo data is `node --env-file=.env scripts/seed-recommendations.ts` (login: `rec-a@prod4me.dev` / `password123`).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `P1001: can't reach database server` | Postgres isn't running — `docker compose up -d postgres` (or start your native service), and check the port/credentials in `DATABASE_URL` match |
+| `could not open extension control file .../vector.control` | pgvector isn't installed for your Postgres. Use the `pgvector/pgvector:pg17` Docker image, or install pgvector natively (see above), then rerun `pnpm exec prisma migrate deploy` |
+| `Error: P1002 / connection timed out` on first start | Postgres container is still initializing — wait ~10s and retry; check `docker compose logs postgres` |
+| Port 5432 or 9000 already in use | Another Postgres/MinIO is bound to that port. Change the **left** side of the port mapping in `docker-compose.yml` (e.g. `5433:5432`) and update `DATABASE_URL` / `MINIO_PORT` in `.env` to match |
+| MinIO uploads fail with bucket errors | The `minio-init` one-shot may not have run: `docker compose logs minio-init`, then `docker compose up -d minio-init` to re-run it |
+| Login says "no account" | Run `pnpm seed` (accounts are only created by seeding or signup) |
+| Stale DB state after schema changes | `docker compose down` keeps data; use `docker compose down -v` to wipe volumes and start fresh (then re-migrate + re-seed) |
 
 ## Known Gaps (not yet persisted)
 

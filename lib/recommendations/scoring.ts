@@ -35,7 +35,7 @@ export type RankedBeat = {
     exclusivePriceCents: number | null
     exclusiveSold: boolean
     licenseCount: number
-    plays: number
+    streams: number
     likes: number
     saves: number
     shares: number
@@ -222,7 +222,7 @@ export async function rankCandidates(
       price: true,
       exclusivePriceCents: true,
       exclusiveSold: true,
-      plays: true,
+      streams: true,
       likes: true,
       saves: true,
       shares: true,
@@ -259,7 +259,7 @@ export async function rankCandidates(
         exclusivePriceCents: beat.exclusivePriceCents,
         exclusiveSold: beat.exclusiveSold,
         licenseCount: beat._count.licenses,
-        plays: beat.plays,
+        streams: beat.streams,
         likes: beat.likes,
         saves: beat.saves,
         shares: beat.shares,

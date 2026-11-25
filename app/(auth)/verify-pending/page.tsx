@@ -127,8 +127,8 @@ export default function VerifyPendingPage() {
 
       <h1 className="mt-4 text-2xl font-black">Verify your email</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        We sent a link to <b className="text-foreground">{email ?? 'your email'}</b>. Open it to start
-        using PROD4ME.
+        We sent a link to <b className="text-foreground">{email ?? 'your email'}</b>. Verify to
+        unlock purchasing and the Studio — everything else works without it.
       </p>
 
       <div className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-surface-2/50 p-4">
@@ -137,6 +137,15 @@ export default function VerifyPendingPage() {
           Waiting for verification — this page opens the app automatically.
         </p>
       </div>
+
+      {/* Prompt: unverified accounts can browse freely — verification only
+          unlocks purchasing and the Studio, so this page is never a trap */}
+      <Link
+        href="/"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-black text-foreground hover:bg-surface-2"
+      >
+        Continue browsing without verifying
+      </Link>
 
       {error && <p className="mt-4 rounded-xl border border-error/30 bg-error/10 p-3 text-xs font-bold text-error">{error}</p>}
       {info && <p className="mt-4 rounded-xl border border-success/30 bg-success/10 p-3 text-xs font-bold text-success">{info}</p>}

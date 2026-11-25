@@ -5,9 +5,12 @@ import { LEADERBOARD_TOP_N, LEADERBOARD_WEIGHTS } from './constants.ts'
 /**
  * Weekly scoring, written as SQL aggregations (one per shape — beats and
  * producers share the same CTE chain). Rules:
- *  - streams: PLAY_50, once per user per beat per day
- *  - likes: distinct users with a LIKE event that still exists (unlike
- *    deletes the event, so stale likes can't count)
+ *  - streams: STREAM events, once per user per beat per day (the events
+ *    themselves are capped at one per 10 minutes server-side)
+ *  - likes: distinct users with a LIKE event that still exists (unlikes
+ *    delete it, so stale likes can't count) and was created before the
+ *    week ended — NOT week-scoped: a like keeps earning while it exists
+ *  - saves: distinct users with a SAVE event that week
  *  - comments / shares: distinct users that week
  *  - purchases: licenses created that week with a SUCCEEDED payment (10 pts);
  *    free claims (license without payment) count 2
@@ -22,6 +25,7 @@ export type LeaderboardBreakdown = {
   likes: number
   comments: number
   shares: number
+  saves: number
   purchases: number
 }
 
@@ -57,6 +61,7 @@ function sharedCtes(weekStart: Date, weekEnd: Date, excludeDev: boolean) {
       SELECT ${weekStart}::timestamptz AS week_start, ${weekEnd}::timestamptz AS week_end, ${excludeDev}::boolean AS exclude_dev
     ),
     eligible AS (
+      -- week-scoped signals (streams, saves, comments, shares) + listeners
       SELECT e."beatId" AS beat_id, e."userId" AS user_id, e."type" AS type, e."createdAt" AS created_at
       FROM "EngagementEvent" e
       JOIN "User" u ON u.id = e."userId"
@@ -67,13 +72,33 @@ function sharedCtes(weekStart: Date, weekEnd: Date, excludeDev: boolean) {
         AND (NOT p.exclude_dev OR u."email" NOT LIKE 'dev-%')
         AND b."producerId" <> e."userId"
     ),
+    like_eligible AS (
+      -- likes are NOT week-scoped: every LIKE event that still exists and was
+      -- created before the week ended counts (unlikes delete the event)
+      SELECT e."beatId" AS beat_id, e."userId" AS user_id
+      FROM "EngagementEvent" e
+      JOIN "User" u ON u.id = e."userId"
+      JOIN "Beat" b ON b.id = e."beatId"
+      CROSS JOIN params p
+      WHERE e."type" = 'LIKE'
+        AND e."createdAt" < p.week_end
+        AND u."createdAt" <= e."createdAt" - interval '24 hours'
+        AND (NOT p.exclude_dev OR u."email" NOT LIKE 'dev-%')
+        AND b."producerId" <> e."userId"
+    ),
     streams AS (
+      -- one stream per user per beat per day (events themselves are capped
+      -- at one per 10 minutes server-side)
       SELECT beat_id, COUNT(DISTINCT (user_id, date_trunc('day', created_at)))::int AS n
-      FROM eligible WHERE type = 'PLAY_50' GROUP BY beat_id
+      FROM eligible WHERE type = 'STREAM' GROUP BY beat_id
     ),
     likes AS (
       SELECT beat_id, COUNT(DISTINCT user_id)::int AS n
-      FROM eligible WHERE type = 'LIKE' GROUP BY beat_id
+      FROM like_eligible GROUP BY beat_id
+    ),
+    saves AS (
+      SELECT beat_id, COUNT(DISTINCT user_id)::int AS n
+      FROM eligible WHERE type = 'SAVE' GROUP BY beat_id
     ),
     comments AS (
       SELECT beat_id, COUNT(DISTINCT user_id)::int AS n
@@ -101,16 +126,19 @@ function sharedCtes(weekStart: Date, weekEnd: Date, excludeDev: boolean) {
     scored_beats AS (
       SELECT b.id AS beat_id, b."producerId", b."createdAt",
         COALESCE(s.n, 0) AS streams, COALESCE(lk.n, 0) AS likes,
-        COALESCE(cm.n, 0) AS comments, COALESCE(sh.n, 0) AS shares,
+        COALESCE(sv.n, 0) AS saves, COALESCE(cm.n, 0) AS comments,
+        COALESCE(sh.n, 0) AS shares,
         COALESCE(wl.paid, 0) AS paid, COALESCE(wl.free, 0) AS free,
         (
           COALESCE(s.n, 0) * ${W.stream} + COALESCE(lk.n, 0) * ${W.like} +
-          COALESCE(cm.n, 0) * ${W.comment} + COALESCE(sh.n, 0) * ${W.share} +
+          COALESCE(sv.n, 0) * ${W.save} + COALESCE(cm.n, 0) * ${W.comment} +
+          COALESCE(sh.n, 0) * ${W.share} +
           COALESCE(wl.paid, 0) * ${W.purchase} + COALESCE(wl.free, 0) * ${W.freeClaim}
         )::float AS score
       FROM "Beat" b
       LEFT JOIN streams s ON s.beat_id = b.id
       LEFT JOIN likes lk ON lk.beat_id = b.id
+      LEFT JOIN saves sv ON sv.beat_id = b.id
       LEFT JOIN comments cm ON cm.beat_id = b.id
       LEFT JOIN shares sh ON sh.beat_id = b.id
       LEFT JOIN week_licenses wl ON wl.beat_id = b.id
@@ -130,7 +158,7 @@ export async function scoreWeek(
     beat_listeners AS (
       SELECT beat_id, COUNT(DISTINCT user_id)::int AS n FROM eligible GROUP BY beat_id
     )
-    SELECT sb.beat_id, sb."producerId", sb.score, sb.streams, sb.likes, sb.comments, sb.shares,
+    SELECT sb.beat_id, sb."producerId", sb.score, sb.streams, sb.likes, sb.saves, sb.comments, sb.shares,
            (sb.paid + sb.free) AS purchases, sb."createdAt",
            COALESCE(bl.n, 0)::int AS listeners
     FROM scored_beats sb
@@ -144,7 +172,8 @@ export async function scoreWeek(
       SELECT b."producerId",
         SUM(sb.score)::float AS score,
         SUM(sb.streams)::int AS streams, SUM(sb.likes)::int AS likes,
-        SUM(sb.comments)::int AS comments, SUM(sb.shares)::int AS shares,
+        SUM(sb.saves)::int AS saves, SUM(sb.comments)::int AS comments,
+        SUM(sb.shares)::int AS shares,
         (SUM(sb.paid) + SUM(sb.free))::int AS purchases,
         MIN(u."createdAt") AS "createdAt"
       FROM scored_beats sb
@@ -162,7 +191,7 @@ export async function scoreWeek(
       FROM week_licenses wl
       JOIN "License" l ON l."beatId" = wl.beat_id
     )
-    SELECT pa."producerId", pa.score, pa.streams, pa.likes, pa.comments, pa.shares, pa.purchases, pa."createdAt",
+    SELECT pa."producerId", pa.score, pa.streams, pa.likes, pa.saves, pa.comments, pa.shares, pa.purchases, pa."createdAt",
       (SELECT COUNT(DISTINCT user_id)::int FROM (
         SELECT e.user_id FROM eligible e JOIN "Beat" b ON b.id = e.beat_id WHERE b."producerId" = pa."producerId"
         UNION
@@ -175,8 +204,8 @@ export async function scoreWeek(
              pa."createdAt" ASC`
 
   const [beatRows, producerRows] = await prisma.$transaction([
-    prisma.$queryRaw<Array<{ beat_id: string; producerId: string; score: number; streams: number; likes: number; comments: number; shares: number; purchases: number; createdAt: Date; listeners: number }>>(beatQuery),
-    prisma.$queryRaw<Array<{ producerId: string; score: number; streams: number; likes: number; comments: number; shares: number; purchases: number; createdAt: Date; listeners: number }>>(producerQuery),
+    prisma.$queryRaw<Array<{ beat_id: string; producerId: string; score: number; streams: number; likes: number; saves: number; comments: number; shares: number; purchases: number; createdAt: Date; listeners: number }>>(beatQuery),
+    prisma.$queryRaw<Array<{ producerId: string; score: number; streams: number; likes: number; saves: number; comments: number; shares: number; purchases: number; createdAt: Date; listeners: number }>>(producerQuery),
   ])
 
   const beats: ScoredBeat[] = beatRows.map(row => ({
@@ -189,6 +218,7 @@ export async function scoreWeek(
       likes: Number(row.likes),
       comments: Number(row.comments),
       shares: Number(row.shares),
+      saves: Number(row.saves),
       purchases: Number(row.purchases),
     },
     createdAt: new Date(row.createdAt),
@@ -203,6 +233,7 @@ export async function scoreWeek(
       likes: Number(row.likes),
       comments: Number(row.comments),
       shares: Number(row.shares),
+      saves: Number(row.saves),
       purchases: Number(row.purchases),
     },
     createdAt: new Date(row.createdAt),

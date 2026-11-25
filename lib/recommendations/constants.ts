@@ -18,6 +18,7 @@ export type EventTypeName =
   | 'COMMENT'
   | 'SKIP'
   | 'SHARE'
+  | 'STREAM'
 
 export const EVENT_WEIGHTS: Record<EventTypeName, number> = {
   PLAY_50: 1,
@@ -31,6 +32,8 @@ export const EVENT_WEIGHTS: Record<EventTypeName, number> = {
   COMMENT: 3,
   SKIP: -2,
   SHARE: 3,
+  // streams are a display/count metric, not a taste signal
+  STREAM: 0,
 }
 
 export const ALL_EVENT_TYPES = Object.keys(EVENT_WEIGHTS) as EventTypeName[]
@@ -64,6 +67,10 @@ export const COLD_START_MIN_EVENTS = 5
 
 /** Recency score reaches 0 at this age (days). */
 export const RECENCY_ZERO_DAYS = 60
+
+/** Cursor cap: only the most recent ids ride on the cursor when encoding —
+ *  older delivered beats stay excluded via the 7-day engagement rule. */
+export const FEED_CURSOR_MAX_IDS = 300
 
 /** Candidate pool size before ranking. */
 export const CANDIDATE_LIMIT = 200

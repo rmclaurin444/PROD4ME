@@ -35,6 +35,7 @@ async function main() {
         name: p.name,
         password,
         role: 'PRODUCER',
+        username: slugify(p.name).slice(0, 20),
         avatar: p.avatar,
         bio: p.bio,
       },
@@ -53,6 +54,7 @@ async function main() {
         name: 'Test Artist',
         password,
         role: 'ARTIST',
+        username: 'test_artist',
         bio: 'Artist on PROD4ME.',
         interests: {
           connectOrCreate: ['drill', 'dark trap'].map(name => ({

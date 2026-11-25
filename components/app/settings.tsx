@@ -95,10 +95,6 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto px-5 pb-28 pt-24 md:px-12">
-      {(() => {
-        const acct: Account = account!
-        return (
-      <div>
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold uppercase tracking-widest text-brand">Account</p>
         <button onClick={onClose} aria-label="Close settings" className="text-muted-foreground hover:text-foreground">
@@ -107,6 +103,32 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
       </div>
       <h1 className="mt-2 text-4xl font-black">Settings</h1>
 
+      {(() => {
+        // the account fetch resolves in an effect below — never dereference
+        // the null initial state (loading spinner, then a retry on failure)
+        if (!account) {
+          if (loading) {
+            return (
+              <p className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+                <Loader2 className="animate-spin" size={16} /> Loading settings…
+              </p>
+            )
+          }
+          return (
+            <div className="py-10 text-center">
+              <p className="text-sm font-semibold text-error">{error || 'Failed to load account'}</p>
+              <button
+                onClick={() => void load()}
+                className="mt-3 rounded-xl bg-surface-2 px-4 py-2 text-xs font-black"
+              >
+                Try again
+              </button>
+            </div>
+          )
+        }
+        const acct: Account = account
+        return (
+      <div>
       {error && <p className="mt-4 rounded-xl border border-error/30 bg-error/10 p-3 text-xs font-bold text-error">{error}</p>}
       {info && <p className="mt-4 rounded-xl border border-success/30 bg-success/10 p-3 text-xs font-bold text-success">{info}</p>}
 

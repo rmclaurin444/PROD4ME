@@ -53,7 +53,7 @@ export async function getProducerPlaylists(producerId: string): Promise<ShapedPl
         exclusivePriceCents: beat.exclusivePriceCents,
         exclusiveSold: beat.exclusiveSold,
         licenseCount: beat._count.licenses,
-        plays: beat.plays,
+        streams: beat.streams,
         likes: beat.likes,
         saves: beat.saves,
         shares: beat.shares,

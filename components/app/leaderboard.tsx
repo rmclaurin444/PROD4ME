@@ -4,8 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ListMusic, Loader2, Pause, Play, Trophy } from 'lucide-react'
 import { Avatar } from '@/components/app/ui'
 import { getInitials } from '@/components/app/data'
+import { BeatCover } from '@/components/app/beat-cover'
 
-type Breakdown = { streams: number; likes: number; comments: number; shares: number; purchases: number }
+type Breakdown = { streams: number; likes: number; comments: number; shares: number; saves: number; purchases: number }
 
 type LeaderEntry = {
   rank: number
@@ -32,16 +33,12 @@ type Payload = {
   availableWeeks: string[]
 }
 
-function presetCss(id: string | null): string {
-  // minimal fallback mirror — artwork presets live in app/artwork-slot.tsx
-  return 'linear-gradient(135deg,#f5f5f5 0%,#111111 100%)'
-}
-
 function Breakdown({ data }: { data: Breakdown }) {
   return (
     <span className="flex shrink-0 items-center gap-2 text-[10px] font-bold text-muted-foreground">
       <span title="streams" className="tabular-nums">{data.streams}▶</span>
       <span title="likes" className="tabular-nums">{data.likes}♥</span>
+      <span title="saves" className="tabular-nums">{data.saves}🔖</span>
       <span title="comments" className="tabular-nums">{data.comments}💬</span>
       <span title="shares" className="tabular-nums">{data.shares}↗</span>
     </span>
@@ -179,7 +176,7 @@ export function LeaderboardView({
           </div>
           <h2 className="mt-5 text-2xl font-black">No standings yet this week</h2>
           <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Streams, likes, comments, shares and sales all earn points. Play something to get the board moving.
+            Streams, likes, saves, comments, shares and sales all earn points. Play something to get the board moving.
           </p>
         </div>
       ) : data && (
@@ -200,14 +197,12 @@ export function LeaderboardView({
                 <div className="mt-4 flex items-center gap-3">
                   {kind === 'BEAT' && entry.beat ? (
                     <>
-                      {entry.beat.artUrl ? (
-                        <img src={entry.beat.artUrl} alt="" className="size-14 rounded-xl object-cover" />
-                      ) : (
-                        <div
-                          className="size-14 shrink-0 rounded-xl"
-                          style={{ background: presetCss(entry.beat.artPreset) }}
-                        />
-                      )}
+                      <BeatCover
+                        artUrl={entry.beat.artUrl}
+                        artPreset={entry.beat.artPreset}
+                        title={entry.beat.title}
+                        className="relative size-14 rounded-xl"
+                      />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black">{entry.beat.title}</p>
                         <p className="truncate text-xs text-muted-foreground">{entry.beat.producer}</p>
@@ -255,14 +250,12 @@ export function LeaderboardView({
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       title="Open in the feed"
                     >
-                      {entry.beat.artUrl ? (
-                        <img src={entry.beat.artUrl} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
-                      ) : (
-                        <div
-                          className="size-10 shrink-0 rounded-lg"
-                          style={{ background: presetCss(entry.beat.artPreset) }}
-                        />
-                      )}
+                      <BeatCover
+                        artUrl={entry.beat.artUrl}
+                        artPreset={entry.beat.artPreset}
+                        title={entry.beat.title}
+                        className="relative size-10 shrink-0 rounded-lg"
+                      />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-black">{entry.beat.title}</span>
                         <span className="block truncate text-xs text-muted-foreground">{entry.beat.producer}</span>
@@ -321,3 +314,4 @@ export function LeaderboardView({
     </div>
   )
 }
+

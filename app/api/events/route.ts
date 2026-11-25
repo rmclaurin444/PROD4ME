@@ -12,16 +12,19 @@ import { rebuildUserVector } from '@/lib/recommendations/vectors.ts'
  *  - 401: not authenticated
  *  - 400: malformed JSON, unknown event type, or unknown beat id
  *  - dedupe: LIKE/SAVE are idempotent per (user, beat, type) — a repeat call
- *    succeeds (200) and writes no second row
+ *    succeeds (200) and writes no second row; STREAM is capped at one event
+ *    per user per beat every STREAM_DEDUPE_WINDOW_MS (extras are ignored
+ *    without an error)
+ *  - STREAM events are never recorded for a producer's own beats
  *
  * When an event is actually stored, the matching `Beat` counter is bumped
- * (plays/likes/saves/comments/shares) so the numbers in the feed and
- * dashboard track reality. Rules:
- *  - PLAY_50 bumps `plays` at most once per user per beat per 24 hours
- *    (replays within a day don't re-count; the event is still stored).
- *  - A producer's events on their own beats never bump counters (still
- *    stored, so recommendations stay unchanged).
+ * (streams/likes/saves/comments/shares) so the numbers in the feed and
+ * dashboard track reality. Counters never move for a producer acting on
+ * their own beats (the event is still stored, so recommendations stay
+ * unchanged).
  */
+const STREAM_DEDUPE_WINDOW_MS = 10 * 60 * 1000
+
 export async function POST(request: Request) {
   const verified = await requireVerifiedUser()
   if (verified instanceof NextResponse) return verified
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { beatId?: unknown; type?: unknown }
+  let body: { beatId?: unknown; type?: unknown; metadata?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -48,6 +51,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid event type' }, { status: 400 })
   }
 
+  // Prompt 13: optional feed tag (foryou/following) for analytics splits —
+  // stored as JSON on the event row, never used by the recommendation math
+  let metadata: Record<string, string | number | boolean> | null = null
+  if (
+    body.metadata &&
+    typeof body.metadata === 'object' &&
+    !Array.isArray(body.metadata)
+  ) {
+    const candidate = body.metadata as Record<string, string | number | boolean>
+    const safe: Record<string, string | number | boolean> = {}
+    for (const [key, value] of Object.entries(candidate)) {
+      if (
+        typeof key === 'string' &&
+        key.length <= 40 &&
+        (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
+        String(value).length <= 100
+      ) {
+        safe[key] = value
+      }
+    }
+    if (Object.keys(safe).length > 0) metadata = safe
+  }
+
   const beat = await prisma.beat.findUnique({
     where: { id: beatId },
     select: { id: true, producerId: true },
@@ -57,6 +83,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Beat not found' }, { status: 400 })
   }
 
+  const isOwnBeat = beat.producerId === userId
   const duplicatesIgnored = type === 'LIKE' || type === 'SAVE'
 
   if (duplicatesIgnored) {
@@ -70,23 +97,25 @@ export async function POST(request: Request) {
     }
   }
 
-  // PLAY_50 bumps plays at most once per user per beat per 24h — replays
-  // inside the window are stored (recommendations unchanged) but not counted.
-  let bumpPlays = type === 'PLAY_50'
-  if (bumpPlays) {
-    const recentPlay = await prisma.engagementEvent.findFirst({
+  // streams: a producer watching their own beat is never recorded at all,
+  // and replays within the dedupe window are silently ignored
+  if (type === 'STREAM') {
+    if (isOwnBeat) {
+      return NextResponse.json({ ok: true, ownBeat: true })
+    }
+    const recentStream = await prisma.engagementEvent.findFirst({
       where: {
         userId,
         beatId,
-        type: 'PLAY_50',
-        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        type: 'STREAM',
+        createdAt: { gte: new Date(Date.now() - STREAM_DEDUPE_WINDOW_MS) },
       },
       select: { id: true },
     })
-    if (recentPlay) bumpPlays = false
+    if (recentStream) {
+      return NextResponse.json({ ok: true, duplicate: true })
+    }
   }
-
-  const isOwnBeat = beat.producerId === userId
 
   const ops: Array<Prisma.PrismaPromise<unknown>> = [
     prisma.engagementEvent.create({
@@ -94,12 +123,13 @@ export async function POST(request: Request) {
         userId,
         beatId,
         type: type as EventTypeName,
+        metadata: metadata ?? Prisma.JsonNull,
       },
     }),
   ]
 
   // counters never move for a producer acting on their own beat
-  const counter = counterOp(beatId, type as EventTypeName, bumpPlays && !isOwnBeat)
+  const counter = counterOp(beatId, type as EventTypeName)
   if (counter) ops.push(counter)
 
   await prisma.$transaction(ops)
@@ -171,14 +201,9 @@ export async function DELETE(request: Request) {
 }
 
 /** Counter bump for a freshly stored event (null for types without one). */
-function counterOp(
-  beatId: string,
-  type: EventTypeName,
-  bumpPlays: boolean
-): Prisma.PrismaPromise<unknown> | null {
-  if (type === 'PLAY_50') {
-    if (!bumpPlays) return null
-    return prisma.beat.update({ where: { id: beatId }, data: { plays: { increment: 1 } } })
+function counterOp(beatId: string, type: EventTypeName): Prisma.PrismaPromise<unknown> | null {
+  if (type === 'STREAM') {
+    return prisma.beat.update({ where: { id: beatId }, data: { streams: { increment: 1 } } })
   }
   if (type === 'LIKE') {
     return prisma.beat.update({ where: { id: beatId }, data: { likes: { increment: 1 } } })

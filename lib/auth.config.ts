@@ -56,7 +56,9 @@ export const authConfig = {
         pathname.startsWith('/login') ||
         pathname.startsWith('/signup') ||
         pathname.startsWith('/forgot') ||
-        pathname.startsWith('/reset')
+        pathname.startsWith('/reset') ||
+        pathname.startsWith('/verify-pending') ||
+        pathname.startsWith('/verify-email')
 
       if (isAuthRoute) {
         // No bounce for logged-in users: if the cookie references a deleted
@@ -66,21 +68,13 @@ export const authConfig = {
         return true
       }
 
-      // Email verification gate: unverified users only see the waiting screen
-      // and the verify-email handler page.
+      // Prompt: unverified accounts browse the whole app (feed, profiles,
+      // inbox, leaderboard…) but can't use the Studio — purchases are gated
+      // server-side by requireVerifiedUserStrict. Unverified users landing
+      // on /studio get the verification screen, which links back to browsing.
       const emailVerified = (auth?.user as { emailVerified?: boolean } | undefined)?.emailVerified
-      if (isLoggedIn && emailVerified === false) {
-        const isVerifyPage =
-          pathname.startsWith('/verify-pending') || pathname.startsWith('/verify-email')
-        if (!isVerifyPage) {
-          return Response.redirect(new URL('/verify-pending', request.nextUrl))
-        }
-        return true
-      }
-
-      // Verified users never see the waiting screen.
-      if (isLoggedIn && emailVerified === true && pathname.startsWith('/verify-pending')) {
-        return Response.redirect(new URL('/', request.nextUrl))
+      if (isLoggedIn && emailVerified === false && pathname.startsWith('/studio')) {
+        return Response.redirect(new URL('/verify-pending', request.nextUrl))
       }
 
       return isLoggedIn

@@ -5,8 +5,13 @@ import Link from 'next/link'
 import { Check, Loader2, Mail, Phone, UserRound, X } from 'lucide-react'
 import { ThemeToggle } from '@/components/app/theme-toggle'
 import { signOut } from 'next-auth/react'
+import { EmailCheckHint, useEmailCheck } from '@/components/app/email-check-hint'
+import { EmailNotificationsSection, ReceiptsSection } from '@/components/app/settings-email'
 
 type Account = {
+  role: string
+  emailOffers: boolean
+  emailSales: boolean
   username: string
   email: string
   pendingEmail: string | null
@@ -25,8 +30,16 @@ function fmtDate(iso: string | null): string {
 }
 
 /** Account Settings — opened from the header gear icon. */
-export function SettingsView({ onClose }: { onClose: () => void }) {
+export function SettingsView({
+  onClose,
+  focusSection,
+}: {
+  onClose: () => void
+  /** section id to scroll to once loaded (email deep link: email-notifications) */
+  focusSection?: string | null
+}) {
   const [account, setAccount] = useState<Account | null>(null)
+  const emailCheck = useEmailCheck()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
@@ -70,6 +83,13 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     void load()
   }, [load])
+
+  // deep link from an email footer: scroll once the sections have rendered
+  const accountLoaded = account !== null
+  useEffect(() => {
+    if (!accountLoaded || !focusSection) return
+    document.getElementById(focusSection)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [accountLoaded, focusSection])
 
   const call = async (path: string, method: string, body: unknown, successMessage?: string) => {
     setBusy(path)
@@ -207,10 +227,22 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         <input
           type="email"
           value={newEmail}
-          onChange={e => setNewEmail(e.target.value)}
+          onChange={e => {
+            setNewEmail(e.target.value)
+            emailCheck.clear()
+          }}
+          onBlur={() => void emailCheck.check(newEmail)}
           className="input mt-3"
           placeholder="New email"
           aria-label="New email"
+        />
+        <EmailCheckHint
+          hint={emailCheck.hint}
+          className="mt-1.5"
+          onUseSuggestion={suggestion => {
+            setNewEmail(suggestion)
+            emailCheck.clear()
+          }}
         />
         <input
           type="password"
@@ -222,7 +254,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         />
         <button
           onClick={() => void call('/change-email', 'POST', { newEmail, currentPassword: emailPassword }, 'Confirmation link sent.').then(() => setEmailPassword(''))}
-          disabled={busy !== '' || !newEmail.includes('@') || !emailPassword}
+          disabled={busy !== '' || !newEmail.includes('@') || !emailPassword || emailCheck.hint?.ok === false}
           className="mt-3 w-full rounded-xl bg-brand px-4 py-2.5 text-xs font-black text-brand-foreground disabled:opacity-40"
         >
           {busy === '/change-email' ? <Loader2 size={14} className="mx-auto animate-spin" /> : 'Send confirmation to new email'}
@@ -375,6 +407,15 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
           )}
         </section>
       )}
+
+      {/* ---- email notifications + receipts / sales (Prompt 15) ---- */}
+      <EmailNotificationsSection
+        role={acct.role}
+        emailOffers={acct.emailOffers}
+        emailSales={acct.emailSales}
+        onSaved={prefs => setAccount(current => (current ? { ...current, ...prefs } : current))}
+      />
+      <ReceiptsSection />
 
       {/* ---- appearance ---- */}
       <section className="mt-6 rounded-3xl border border-border bg-surface p-6">

@@ -14,3 +14,8 @@ export function stripeConfigError(): string | null {
     ? null
     : 'Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local (test mode keys).'
 }
+
+/** True while the secret key is a Stripe test key (sk_test_…). */
+export function isStripeTestMode(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_'))
+}

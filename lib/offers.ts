@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import type { Offer, Prisma } from '@prisma/client'
 import { dollarsToCents, formatMoney, isStripeSafeAmount, timeLeftLabel } from '@/lib/money'
+import { afterResponse } from '@/lib/emails/after'
+import { sendOfferExpiredEmails } from '@/lib/emails/send'
 
 export const OFFER_TTL_HOURS = 48
 export const OFFER_TTL_MS = OFFER_TTL_HOURS * 60 * 60 * 1000
@@ -19,14 +21,25 @@ export function isWaitingStatus(status: string): status is WaitingOfferStatus {
   return (WAITING_OFFER_STATUSES as readonly string[]).includes(status)
 }
 
-export async function expireStaleOffers() {
-  return prisma.offer.updateMany({
+/**
+ * Lazy expiry (called by every offer-reading route) and the hourly cron.
+ * Returns how many offers expired; the artists of exactly those offers get
+ * an "offer expired" email after the response (each sent once).
+ */
+export async function expireStaleOffers(): Promise<{ count: number }> {
+  const expired = await prisma.offer.updateManyAndReturn({
     where: {
       status: { in: [...WAITING_OFFER_STATUSES] },
       expiresAt: { lt: new Date() },
     },
     data: { status: 'EXPIRED', expiresAt: null },
+    select: { id: true },
   })
+  if (expired.length > 0) {
+    const ids = expired.map(offer => offer.id)
+    afterResponse(() => sendOfferExpiredEmails(ids))
+  }
+  return { count: expired.length }
 }
 
 export function offerExpired(offer: Pick<Offer, 'status' | 'expiresAt'>) {

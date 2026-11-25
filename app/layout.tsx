@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Providers } from '@/components/providers'
 import { tryGetAppUrl } from '@/lib/app-url'
+import { isStripeTestMode } from '@/lib/stripe'
 import './globals.css'
 
 const DESCRIPTION = 'Discover, upload, and negotiate the next beat on PROD4ME.'
@@ -56,7 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
-        <Providers stripeTestMode={Boolean(process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_'))}>
+        <Providers stripeTestMode={isStripeTestMode()}>
           {children}
         </Providers>
       </body>

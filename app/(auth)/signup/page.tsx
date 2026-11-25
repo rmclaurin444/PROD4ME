@@ -7,6 +7,7 @@ import { signIn } from 'next-auth/react'
 import { ChevronLeft, Mic2, AudioLines, Check, Music4 } from 'lucide-react'
 import { TagInput } from '@/components/app/tag-input'
 import { MAX_GENRES } from '@/lib/tags'
+import { EmailCheckHint, useEmailCheck } from '@/components/app/email-check-hint'
 
 type Step = 'details' | 'role' | 'genres'
 type Role = 'PRODUCER' | 'ARTIST'
@@ -28,6 +29,7 @@ export default function SignUpPage() {
   const [popularGenres, setPopularGenres] = useState<string[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const emailCheck = useEmailCheck()
 
   const totalSteps = role === 'ARTIST' ? 3 : 2
   const stepNumber = step === 'details' ? 1 : step === 'role' ? 2 : 3
@@ -68,6 +70,7 @@ export default function SignUpPage() {
       return 'Enter a valid phone number (e.g. +14045551234)'
     }
     if (!email.includes('@')) return 'Please enter a valid email'
+    if (emailCheck.hint && !emailCheck.hint.ok) return emailCheck.hint.message ?? 'Please enter a valid email'
     if (password.length < 8) return 'Password must be at least 8 characters'
     if (password !== confirmPassword) return 'Passwords do not match'
     return ''
@@ -159,6 +162,11 @@ export default function SignUpPage() {
       const data = await res.json()
 
       if (!res.ok) {
+        // email problems are fixed on the details step, where the field is
+        if (data.field === 'email') {
+          emailCheck.setFromServer(data.error, data.suggestion)
+          setStep('details')
+        }
         setError(data.error || 'Registration failed')
         setLoading(false)
         return
@@ -244,12 +252,25 @@ export default function SignUpPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  emailCheck.clear()
+                }}
+                onBlur={() => void emailCheck.check(email)}
                 className="input mt-2"
                 placeholder="you@example.com"
                 aria-label="Email"
               />
             </label>
+            <EmailCheckHint
+              hint={emailCheck.hint}
+              className="-mt-2"
+              onUseSuggestion={suggestion => {
+                setEmail(suggestion)
+                emailCheck.clear()
+                setError('')
+              }}
+            />
 
             <label className="text-xs font-bold text-muted-foreground">
               Password

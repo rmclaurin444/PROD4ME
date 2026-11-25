@@ -30,7 +30,20 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/')
+      // Prompt 15: return to the page that sent the user here (e.g. an email
+      // button like /?open=library). Same-origin paths only — never an
+      // external redirect.
+      let destination = '/'
+      const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl')
+      if (callbackUrl) {
+        try {
+          const target = new URL(callbackUrl, window.location.origin)
+          if (target.origin === window.location.origin) destination = `${target.pathname}${target.search}`
+        } catch {
+          // malformed callbackUrl: fall back to the feed
+        }
+      }
+      router.push(destination)
       router.refresh()
     } catch {
       setError('Something went wrong. Please try again.')

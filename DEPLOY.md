@@ -11,6 +11,7 @@ This guide takes PROD4ME from a GitHub repo to a running site on Railway. It ass
 | Audio bucket, Artwork bucket | Private S3-compatible storage (Railway Buckets) |
 | `cron-expire-offers` | Hourly job: expires offers, cleans up rate limits |
 | `cron-leaderboard` | Weekly job: saves last week's leaderboard |
+| `email-validator` | Private email-address checker used at signup (no public URL) |
 
 Outside Railway you'll use **Resend** (email), **Stripe** (test mode), and optionally **Twilio** (phone verification).
 
@@ -143,6 +144,9 @@ MEDIA_PROXY=1
 RESEND_API_KEY=re_...
 EMAIL_FROM=PROD4ME <no-reply@prod4me.studio>
 
+# email address check (step 5b)
+EMAIL_CHECK_URL=http://email-validator.railway.internal:8080
+
 # payments, test mode (step 6)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
@@ -234,6 +238,44 @@ node --env-file=.env scripts/cron-call.mjs expire-offers
 
 In production a missing `RESEND_API_KEY` stops the server at startup. The development "print the email to the console" fallback never runs in production, and reset links are never returned in API responses.
 
+The app sends these emails through Resend, only to accounts with a verified email: verification and password emails, **purchase receipts** (artist), **sale notifications** (producer), **free-claim confirmations**, and **offer updates** (new, countered, accepted, declined, expired, exclusive sold). Each one is sent once, even if Stripe delivers a webhook twice. Users can turn offer and sale emails off in **Settings → Email notifications**. Receipts and free-claim confirmations are always sent.
+
+---
+
+## 5b. Email validator
+
+At signup and when someone changes their email, the app checks the address first: syntax, whether the domain exists and has MX records, and known throwaway domains. It also suggests fixes for typos ("Did you mean name@gmail.com?"). The check runs on **our own private copy** of the open-source Rapid Email Verifier (`umutert/emailvalidator`), so signup addresses never leave the project. The app never calls the public hosted API.
+
+It doesn't prove an inbox exists. The verification link still does that. If the validator is down or slow (3-second timeout), the check is skipped and signups keep working.
+
+1. In the project, click **+ Create → Docker Image** and enter the pinned image:
+   ```
+   umutert/emailvalidator@sha256:78ab88d3bb19cf3501d794522ad527a53ba77ab59b8a969f65d3ac70651181ac
+   ```
+2. Name the service `email-validator`. Under **Variables**, set `PORT=8080`.
+3. **Don't generate a public domain.** Under **Settings → Networking**, there should be no public domain. The service is only reachable on the private network. (Redis, Prometheus, and Grafana are optional for this image and aren't needed.)
+4. On the `prod4me` web service, set:
+   ```env
+   EMAIL_CHECK_URL=http://email-validator.railway.internal:8080
+   ```
+   and redeploy it.
+5. **Test it from inside the project.** Your computer can't reach `*.railway.internal`, so run the test in the web service's own container with `railway ssh` (Railway CLI from step 7b, linked to the project):
+   ```bash
+   railway ssh --service prod4me
+   # then, inside the container:
+   for e in name@gmail.com name@gmial.com name@no-such-domain-zzqx.com x@mailinator.com; do
+     node -e "fetch(process.env.EMAIL_CHECK_URL+'/api/validate?email='+encodeURIComponent(process.argv[1])).then(r=>r.json()).then(d=>console.log(process.argv[1],'→',d.status,d.typoSuggestion??''))" "$e"
+   done
+   exit
+   ```
+   Expected: `VALID`, `NO_MX_RECORDS name@gmail.com`, `INVALID_DOMAIN`, and `DISPOSABLE`. Then try the same addresses on the live signup form. It should suggest `gmail.com` and reject the other two.
+6. **If the web service can't reach it:** check that both services are in the **same project and environment**, that the name in `EMAIL_CHECK_URL` matches the service name exactly (`email-validator`), and look at the validator's **Deploy Logs**. While it's unreachable, the web service logs `email-check: validator unavailable` (never the address) and signups still go through.
+
+**Updating the image on purpose:** the digest is pinned so a new upstream image is never pulled by surprise. To update:
+1. Locally: `docker pull umutert/emailvalidator:latest`, then `docker inspect --format='{{index .RepoDigests 0}}' umutert/emailvalidator:latest` to get the new digest.
+2. Put the new `image@sha256:…` in `docker-compose.yml`, run `docker compose up -d email-validator`, and test the four addresses above with `curl "http://localhost:8080/api/validate?email=name@gmial.com"`. Check that the response still has `status` and `typoSuggestion`, since `lib/email-check.ts` reads those fields.
+3. Change the image on the Railway `email-validator` service (**Settings → Source → Image**) to the same digest and redeploy.
+
 ---
 
 ## 6. Payments (Stripe, test mode)
@@ -319,6 +361,7 @@ If uploads fail with `SignatureDoesNotMatch` or the wrong host, check `MINIO_PAT
 
 Use two browsers, or one normal and one private window, so you have a producer account and an artist account.
 
+- [ ] Signup email check: `name@gmial.com` suggests `name@gmail.com`; a made-up domain and a throwaway address (e.g. `@mailinator.com`) are rejected
 - [ ] Sign up and verify the email (link arrives; the pending screen moves on by itself)
 - [ ] Log out, then log in with **email**, then with **username**
 - [ ] Producer: upload a beat (audio and artwork both reach 100%)
@@ -327,6 +370,9 @@ Use two browsers, or one normal and one private window, so you have a producer a
 - [ ] Like and comment on a beat
 - [ ] Artist makes an offer → producer counters → artist accepts → **Pay** with `4242 4242 4242 4242` → the license appears in the artist's library → license download works
 - [ ] The test-mode notice shows in the purchase modal and on the Pay screen
+- [ ] After paying: the artist gets one receipt email, and the producer gets one sale email (both say "Test mode: no real money was charged.")
+- [ ] Offer emails arrive for new, countered, accepted, and declined offers; turning off **Settings → Email notifications → Offer updates** stops them
+- [ ] Settings → Receipts lists the purchase; **View** opens `/receipts/…`, which prints cleanly (try Print → Save as PDF)
 - [ ] Message between the two accounts (new messages appear within a few seconds)
 - [ ] Follow the producer from the artist; the beat shows in the **Following** feed
 - [ ] Leaderboard page loads

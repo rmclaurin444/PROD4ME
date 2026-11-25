@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe'
 import { WAITING_OFFER_STATUSES } from '@/lib/offers'
 import { recordEngagementEvent } from '@/lib/recommendations/record.ts'
+import { afterResponse } from '@/lib/emails/after'
+import { sendExclusiveSoldEmails, sendPaymentEmails } from '@/lib/emails/send'
 
 export class UnpurchaseableError extends Error {}
 
@@ -27,6 +29,9 @@ export async function finalizeCheckoutSession(session: CheckoutSessionLike) {
   }
 
   if (payment.status === 'SUCCEEDED') {
+    // redelivered webhook / success-page self-heal: retries any email that
+    // didn't go out the first time (each one still sends only once)
+    afterResponse(() => sendPaymentEmails(payment.id))
     return { handled: true, idempotent: true }
   }
   if (payment.status !== 'PENDING') {
@@ -37,6 +42,8 @@ export async function finalizeCheckoutSession(session: CheckoutSessionLike) {
 
   try {
     let granted = false
+    /** open offers closed because this purchase sold the exclusive */
+    let closedByExclusive: string[] = []
     await prisma.$transaction(async tx => {
       const beat = await tx.beat.findUnique({ where: { id: payment.beatId } })
       if (!beat) throw new UnpurchaseableError('Beat no longer exists')
@@ -78,16 +85,26 @@ export async function finalizeCheckoutSession(session: CheckoutSessionLike) {
 
       if (payment.licenseType === 'EXCLUSIVE') {
         await tx.beat.update({ where: { id: payment.beatId }, data: { exclusiveSold: true } })
-        await tx.offer.updateMany({
+        const closed = await tx.offer.updateManyAndReturn({
           where: {
             beatId: payment.beatId,
             id: { not: payment.offerId ?? '' },
             status: { in: [...WAITING_OFFER_STATUSES] },
           },
           data: { status: 'DECLINED', expiresAt: null },
+          select: { id: true },
         })
+        closedByExclusive = closed.map(offer => offer.id)
       }
     })
+
+    // Prompt 15: emails go out after the transaction commits and never affect
+    // the result (receipt + sale notice send once, even on redelivery)
+    afterResponse(() => sendPaymentEmails(payment.id))
+    if (closedByExclusive.length > 0) {
+      const ids = closedByExclusive
+      afterResponse(() => sendExclusiveSoldEmails(ids))
+    }
 
     // engagement: library addition, recorded server-side so it also covers
     // grants delivered through the webhook while the artist is away.

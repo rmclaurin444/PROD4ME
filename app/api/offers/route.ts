@@ -9,6 +9,8 @@ import {
   newOfferExpiry,
   shapeOffer,
 } from '@/lib/offers'
+import { afterResponse } from '@/lib/emails/after'
+import { sendOfferEmail } from '@/lib/emails/send'
 
 export async function GET() {
   const verified = await requireVerifiedUser()
@@ -98,6 +100,8 @@ export async function POST(request: Request) {
       },
       include: { beat: true, artist: true, producer: true },
     })
+    // Prompt 15: "new offer" email to the producer, after the create commits
+    afterResponse(() => sendOfferEmail('NEW', offer.id))
     return NextResponse.json({ offer: shapeOffer(offer) }, { status: 201 })
   } catch (error) {
     console.error('Offer create error:', error)

@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client'
 import { requireVerifiedUserStrict } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
 import { recordEngagementEvent } from '@/lib/recommendations/record.ts'
+import { afterResponse } from '@/lib/emails/after'
+import { sendFreeClaimEmail } from '@/lib/emails/send'
 
 export async function POST(request: Request) {
   const verified = await requireVerifiedUserStrict()
@@ -51,6 +53,9 @@ export async function POST(request: Request) {
     void recordEngagementEvent(session.user.id, beat.id, 'BUY').catch(err =>
       console.warn('BUY event record failed', err)
     )
+
+    // Prompt 15: free-claim confirmation (always sent), after the grant commits
+    afterResponse(() => sendFreeClaimEmail(license.id))
 
     return NextResponse.json({ license: { id: license.id, licenseType: license.licenseType } }, { status: 201 })
   } catch (error) {

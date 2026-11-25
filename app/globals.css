@@ -145,6 +145,23 @@
   --sidebar-ring: #a3a3a3;
 }
 
+/* Prompt 15: printing (e.g. /receipts/[paymentId]) always uses the light
+   palette — paper is white, and browsers drop backgrounds when printing, so
+   dark-mode light text would be unreadable. */
+@media print {
+  .dark {
+    color-scheme: light;
+    --background: #ffffff;
+    --foreground: #000000;
+    --surface: #ffffff;
+    --surface-2: #f5f5f5;
+    --muted-foreground: #525252;
+    --border: rgba(0, 0, 0, 0.2);
+    --brand: #000000;
+    --brand-foreground: #ffffff;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

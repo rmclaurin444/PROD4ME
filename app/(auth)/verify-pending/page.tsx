@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { Loader2, MailWarning, RefreshCw, X } from 'lucide-react'
+import { EmailCheckHint, useEmailCheck } from '@/components/app/email-check-hint'
 
 /**
  * Shown to logged-in users whose email is not verified yet. Polls the
@@ -22,6 +23,7 @@ export default function VerifyPendingPage() {
   const [wrongEmail, setWrongEmail] = useState(false)
   const [newEmail, setNewEmail] = useState('')
   const [password, setPassword] = useState('')
+  const emailCheck = useEmailCheck()
 
   const { update: updateSession } = useSession()
   const updateRef = useRef(updateSession)
@@ -104,8 +106,12 @@ export default function VerifyPendingPage() {
         body: JSON.stringify({ newEmail, currentPassword: password }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Could not change email')
+      if (!res.ok) {
+        if (data.field === 'email') emailCheck.setFromServer(data.error, data.suggestion)
+        throw new Error(data.error ?? 'Could not change email')
+      }
       setWrongEmail(false)
+      emailCheck.clear()
       setPassword('')
       setEmail(newEmail)
       setInfo('A new link was sent to your new address.')
@@ -177,10 +183,22 @@ export default function VerifyPendingPage() {
           <input
             type="email"
             value={newEmail}
-            onChange={e => setNewEmail(e.target.value)}
+            onChange={e => {
+              setNewEmail(e.target.value)
+              emailCheck.clear()
+            }}
+            onBlur={() => void emailCheck.check(newEmail)}
             className="input mt-2"
             placeholder="New email"
             aria-label="New email"
+          />
+          <EmailCheckHint
+            hint={emailCheck.hint}
+            className="mt-1.5"
+            onUseSuggestion={suggestion => {
+              setNewEmail(suggestion)
+              emailCheck.clear()
+            }}
           />
           <input
             type="password"
@@ -192,7 +210,7 @@ export default function VerifyPendingPage() {
           />
           <button
             onClick={() => void changeEmail()}
-            disabled={!newEmail.includes('@') || !password}
+            disabled={!newEmail.includes('@') || !password || emailCheck.hint?.ok === false}
             className="mt-3 w-full rounded-xl bg-brand px-4 py-2.5 text-xs font-black text-brand-foreground disabled:opacity-40"
           >
             Update email and resend link

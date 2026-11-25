@@ -6,6 +6,7 @@ import { normalizePhone, phoneError, usernameValidationError, normalizeUsername 
 import { issueVerificationToken } from '@/lib/verification-token'
 import { EMAIL_TEMPLATES, sendEmail } from '@/lib/email'
 import { getAppUrl } from '@/lib/app-url'
+import { checkEmail, emailCheckMessage } from '@/lib/email-check'
 
 export async function POST(request: Request) {
   try {
@@ -43,6 +44,17 @@ export async function POST(request: Request) {
     }
 
     const emailLower = email.toLowerCase()
+
+    // Prompt 15: catch typos, dead domains and throwaway inboxes before the
+    // verification email goes out (fails open if the validator is down).
+    const emailResult = await checkEmail(emailLower)
+    const emailMessage = emailCheckMessage(emailResult)
+    if (emailMessage) {
+      return NextResponse.json(
+        { error: emailMessage, field: 'email', ...(emailResult.suggestion ? { suggestion: emailResult.suggestion } : {}) },
+        { status: 400 }
+      )
+    }
 
     const [existingUser, existingUsername, existingPhone] = await Promise.all([
       prisma.user.findUnique({ where: { email: emailLower } }),

@@ -6,6 +6,7 @@ import { requireVerifiedUser } from '@/lib/auth-guards'
 import { issueVerificationToken } from '@/lib/verification-token'
 import { EMAIL_TEMPLATES, sendEmail } from '@/lib/email'
 import { getAppUrl } from '@/lib/app-url'
+import { checkEmail, emailCheckMessage } from '@/lib/email-check'
 
 /** POST /api/account/change-email — { newEmail, currentPassword }
  *
@@ -44,6 +45,17 @@ export async function POST(request: Request) {
 
   if (newEmail === user.email) {
     return NextResponse.json({ error: 'That is already your email' }, { status: 400 })
+  }
+
+  // Prompt 15: check the NEW address before sending the confirmation link
+  // (also covers the "Wrong email?" fix on /verify-pending, which posts here)
+  const emailResult = await checkEmail(newEmail)
+  const emailMessage = emailCheckMessage(emailResult)
+  if (emailMessage) {
+    return NextResponse.json(
+      { error: emailMessage, field: 'email', ...(emailResult.suggestion ? { suggestion: emailResult.suggestion } : {}) },
+      { status: 400 }
+    )
   }
 
   const existing = await prisma.user.findUnique({ where: { email: newEmail } })

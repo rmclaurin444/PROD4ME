@@ -290,6 +290,42 @@ export function AppShell({
     }
   }, [view])
 
+  /** Prompt 15: email buttons link to `/?open=…` (lib/emails/shared.ts
+   *  appLinks). Handled once on load; the query is then removed so a reload
+   *  doesn't re-trigger it. */
+  const [settingsFocus, setSettingsFocus] = useState<string | null>(null)
+  const deepLinkHandled = useRef(false)
+  useEffect(() => {
+    if (deepLinkHandled.current) return
+    deepLinkHandled.current = true
+    const params = new URLSearchParams(window.location.search)
+    const open = params.get('open')
+    if (!open) return
+    params.delete('open')
+    const beatId = params.get('id')
+    params.delete('id')
+    const section = params.get('section')
+    params.delete('section')
+    const rest = params.toString()
+    window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}`)
+
+    if (open === 'offers') {
+      openOffersSection()
+    } else if (open === 'library') {
+      setProfileUser(null)
+      setView('profile')
+      pendingScrollRef.current = 'library-section'
+    } else if (open === 'dashboard') {
+      setProfileUser(null)
+      setView('dashboard')
+    } else if (open === 'beat' && beatId) {
+      void openBeat(beatId)
+    } else if (open === 'settings') {
+      setSettingsFocus(section && /^[a-z-]+$/.test(section) ? section : null)
+      setView('settings')
+    }
+  }, [openBeat, openOffersSection])
+
   /** Opens the real public profile (GET /api/users/[username]). */
   const openProfile = useCallback(async (username: string) => {
     try {
@@ -913,7 +949,7 @@ export function AppShell({
               }}
             />
           ) : view === 'settings' ? (
-            <SettingsView onClose={() => setView('feed')} />
+            <SettingsView onClose={() => setView('feed')} focusSection={settingsFocus} />
           ) : view === 'dashboard' ? (
             isProducer ? (
               // consolidated producer dashboard: offers + beats + inbox on one page

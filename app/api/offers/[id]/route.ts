@@ -10,6 +10,9 @@ import {
   shapeOffer,
 } from '@/lib/offers'
 
+import { afterResponse } from '@/lib/emails/after'
+import { sendOfferEmail, sendOfferExpiredEmails } from '@/lib/emails/send'
+
 import type { Prisma } from '@prisma/client'
 
 function bad(error: string, status = 400) {
@@ -56,6 +59,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
       where: { id },
       data: { status: 'EXPIRED', expiresAt: null },
     })
+    afterResponse(() => sendOfferExpiredEmails([id]))
     return bad('This offer has expired', 409)
   }
 
@@ -120,6 +124,20 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     data,
     include: { beat: true, artist: true, producer: true },
   })
+
+  // Prompt 15: offer emails after the update commits (never fail the action).
+  // accept-counter and an artist declining a counter are the artist's own
+  // actions, so they send nothing.
+  const event =
+    body.action === 'accept'
+      ? 'ACCEPTED'
+      : body.action === 'counter'
+        ? 'COUNTERED'
+        : body.action === 'decline' && isProducerOwner
+          ? 'DECLINED'
+          : null
+  if (event) afterResponse(() => sendOfferEmail(event, id))
+
   return NextResponse.json({ offer: shapeOffer(updated) })
 }
 

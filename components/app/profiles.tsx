@@ -316,7 +316,9 @@ export function ArtistProfile({
           offersKey remount logic in app-shell lives here now. */}
       <OffersInbox role="ARTIST" isArtist />
 
-      <h2 className="mt-10 text-xl font-black">My Library · {library?.length ?? 0} licenses</h2>
+      <h2 id="library-section" className="mt-10 scroll-mt-24 text-xl font-black">
+        My Library · {library?.length ?? 0} licenses
+      </h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {(library ?? []).map(license => (
           <div

@@ -55,6 +55,18 @@ services:
       MINIO_BUCKET_AUDIO: ${MINIO_BUCKET_AUDIO:-beat-audio}
       MINIO_BUCKET_ARTWORK: ${MINIO_BUCKET_ARTWORK:-beat-artwork}
 
+  # Self-hosted Rapid Email Verifier (lib/email-check.ts). Pinned by digest so
+  # a new upstream image is never pulled automatically — see DEPLOY.md
+  # "Email validator" to update it on purpose. Bound to 127.0.0.1 only.
+  email-validator:
+    image: umutert/emailvalidator@sha256:78ab88d3bb19cf3501d794522ad527a53ba77ab59b8a969f65d3ac70651181ac
+    container_name: prod4me-email-validator
+    environment:
+      PORT: "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
 volumes:
   minio-data:
   postgres-data:

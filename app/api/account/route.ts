@@ -19,6 +19,9 @@ export async function GET() {
       phone: true,
       phoneVerifiedAt: true,
       passwordChangedAt: true,
+      role: true,
+      emailOffers: true,
+      emailSales: true,
     },
   })
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -32,5 +35,8 @@ export async function GET() {
     phoneVerified: !!user.phoneVerifiedAt,
     passwordChangedAt: user.passwordChangedAt?.toISOString() ?? null,
     phoneEnabled: phoneEnabled(),
+    role: user.role,
+    emailOffers: user.emailOffers,
+    emailSales: user.emailSales,
   })
 }

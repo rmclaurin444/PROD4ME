@@ -192,10 +192,16 @@ export async function POST(request: Request) {
     },
   })
 
+  // Prompt 15: Stripe sends its own receipt in live mode when receipts are on
+  // in the Dashboard. The app's receipt email (lib/emails/send.ts) is the main
+  // one and is always sent.
+  const buyer = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+
   try {
     const checkoutSession = await stripe.checkout.sessions.create(
       {
         mode: 'payment',
+        ...(buyer?.email ? { payment_intent_data: { receipt_email: buyer.email } } : {}),
         line_items: [
           {
             quantity: 1,

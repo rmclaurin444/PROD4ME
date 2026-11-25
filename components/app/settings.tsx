@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Check, Loader2, Mail, Phone, UserRound, X } from 'lucide-react'
 import { ThemeToggle } from '@/components/app/theme-toggle'
 import { signOut } from 'next-auth/react'
@@ -380,6 +381,19 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Appearance</h2>
         <div className="mt-3">
           <ThemeToggle />
+        </div>
+      </section>
+
+      {/* ---- legal ---- */}
+      <section className="mt-6 rounded-3xl border border-border bg-surface p-6">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Legal</h2>
+        <div className="mt-3 flex flex-wrap gap-4 text-sm font-bold">
+          <Link href="/terms" className="text-foreground underline underline-offset-2">
+            Terms of Service
+          </Link>
+          <Link href="/privacy" className="text-foreground underline underline-offset-2">
+            Privacy Policy
+          </Link>
         </div>
       </section>
 

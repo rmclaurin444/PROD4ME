@@ -1,6 +1,7 @@
 import { prisma } from './prisma.ts'
 import { avatarUrl, blockedEitherDirection } from './messaging.ts'
 import { rebuildUserVector } from './recommendations/vectors.ts'
+import { checkRateLimit } from './rate-limit.ts'
 
 /**
  * Follow system (Prompt 13): idempotent follow/unfollow with a per-user
@@ -12,14 +13,10 @@ import { rebuildUserVector } from './recommendations/vectors.ts'
 const FOLLOW_WINDOW_MS = 60 * 60 * 1000
 const FOLLOW_LIMIT_PER_HOUR = 60
 
-const followHits = new Map<string, number[]>()
-
-export function followRateLimited(userId: string): boolean {
-  const now = Date.now()
-  const recent = (followHits.get(userId) ?? []).filter(t => now - t < FOLLOW_WINDOW_MS)
-  recent.push(now)
-  followHits.set(userId, recent)
-  return recent.length > FOLLOW_LIMIT_PER_HOUR
+/** Postgres-backed (lib/rate-limit.ts) so the limit survives restarts. */
+export async function followRateLimited(userId: string): Promise<boolean> {
+  const { ok } = await checkRateLimit(`follow:${userId}`, FOLLOW_LIMIT_PER_HOUR, FOLLOW_WINDOW_MS)
+  return !ok
 }
 
 /** Follow a user. Idempotent; rejected when blocked either direction.

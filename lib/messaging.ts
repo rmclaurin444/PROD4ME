@@ -1,6 +1,7 @@
 import { prisma } from './prisma.ts'
 import { publicUrl, BUCKET_ARTWORK } from './storage.ts'
 import { MESSAGES_PER_MINUTE } from './messaging/constants.ts'
+import { checkRateLimit } from './rate-limit.ts'
 
 /**
  * Server-side messaging helpers: avatar URL shaping, the race-safe
@@ -109,20 +110,10 @@ export async function getParticipant(conversationId: string, userId: string) {
   })
 }
 
-/** Per-user send rate limit (in-memory, matching the login limiter pattern). */
-const sendHits = new Map<string, number[]>()
-
-export function sendRateLimited(userId: string): boolean {
-  const now = Date.now()
-  const recent = (sendHits.get(userId) ?? []).filter(t => now - t < 60_000)
-  if (recent.length >= MESSAGES_PER_MINUTE) {
-    recent.push(now)
-    sendHits.set(userId, recent)
-    return true
-  }
-  recent.push(now)
-  sendHits.set(userId, recent)
-  return false
+/** Per-user send rate limit, Postgres-backed (lib/rate-limit.ts). */
+export async function sendRateLimited(userId: string): Promise<boolean> {
+  const { ok } = await checkRateLimit(`msg:${userId}`, MESSAGES_PER_MINUTE, 60_000)
+  return !ok
 }
 
 /** Unread counts per conversation for one user, in one query. */

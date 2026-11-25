@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { requireVerifiedUser } from '@/lib/auth-guards'
 import { issueVerificationToken } from '@/lib/verification-token'
 import { EMAIL_TEMPLATES, sendEmail } from '@/lib/email'
+import { getAppUrl } from '@/lib/app-url'
 
 /** POST /api/account/change-email — { newEmail, currentPassword }
  *
@@ -53,8 +54,7 @@ export async function POST(request: Request) {
   await prisma.user.update({ where: { id: user.id }, data: { pendingEmail: newEmail } })
 
   const token = await issueVerificationToken(user.id, 'EMAIL_CHANGE', newEmail, 24 * 60 * 60 * 1000)
-  const origin = request.headers.get('origin') ?? 'http://localhost:3000'
-  const link = `${origin}/verify-email?token=${token}&change=1`
+  const link = `${getAppUrl()}/verify-email?token=${token}&change=1`
 
   try {
     await sendEmail({ to: newEmail, ...EMAIL_TEMPLATES.confirmEmailChange(link, newEmail) })

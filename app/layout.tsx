@@ -1,12 +1,26 @@
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Providers } from '@/components/providers'
+import { tryGetAppUrl } from '@/lib/app-url'
 import './globals.css'
 
+const DESCRIPTION = 'Discover, upload, and negotiate the next beat on PROD4ME.'
+
 export const metadata: Metadata = {
-  title: 'PROD4ME — Your sound. Your terms.',
-  description: 'Discover, upload, and negotiate the next beat on PROD4ME.',
-  generator: 'v0.app',
+  // tryGetAppUrl (not getAppUrl) so a local `next build` without APP_URL
+  // still works; on Railway APP_URL / RAILWAY_PUBLIC_DOMAIN are set at build.
+  metadataBase: new URL(tryGetAppUrl() ?? 'http://localhost:3000'),
+  title: {
+    default: 'PROD4ME — Your sound. Your terms.',
+    template: '%s · PROD4ME',
+  },
+  description: DESCRIPTION,
+  applicationName: 'PROD4ME',
+  openGraph: {
+    type: 'website',
+    siteName: 'PROD4ME',
+    title: 'PROD4ME — Your sound. Your terms.',
+    description: DESCRIPTION,
+  },
   icons: {
     icon: [
       {
@@ -42,8 +56,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
-        <Providers>{children}</Providers>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <Providers stripeTestMode={Boolean(process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_'))}>
+          {children}
+        </Providers>
       </body>
     </html>
   )

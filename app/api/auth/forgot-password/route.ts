@@ -2,26 +2,19 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { issueResetToken } from '@/lib/reset-token'
 import { EMAIL_TEMPLATES, sendEmail } from '@/lib/email'
+import { getAppUrl } from '@/lib/app-url'
+import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 
+// 5 requests per 15 minutes per client IP, stored in Postgres
 const WINDOW_MS = 15 * 60 * 1000
 const MAX_REQUESTS = 5
-const hits = new Map<string, number[]>()
-
-function rateLimited(ip: string) {
-  const now = Date.now()
-  const recent = (hits.get(ip) ?? []).filter(t => now - t < WINDOW_MS)
-  if (recent.length >= MAX_REQUESTS) return true
-  recent.push(now)
-  hits.set(ip, recent)
-  return false
-}
 
 const GENERIC_MESSAGE =
   'If an account with that email exists, a reset link has been created. Follow the link to choose a new password.'
 
 export async function POST(request: Request) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local'
-  if (rateLimited(ip)) {
+  const { ok } = await checkRateLimit(`forgot:${clientIp(request)}`, MAX_REQUESTS, WINDOW_MS)
+  if (!ok) {
     return NextResponse.json({ error: 'Too many attempts — try again in a few minutes.' }, { status: 429 })
   }
 
@@ -42,8 +35,7 @@ export async function POST(request: Request) {
   let devLink: string | undefined
   if (user) {
     const token = await issueResetToken(email)
-    const origin = request.headers.get('origin') ?? 'http://localhost:3000'
-    const link = `${origin}/reset?token=${token}`
+    const link = `${getAppUrl()}/reset?token=${token}`
     // Email the reset link through lib/email; in dev without RESEND_API_KEY
     // the link is logged and returned to the UI (never in production).
     try {

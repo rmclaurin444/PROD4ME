@@ -4,22 +4,18 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { authConfig } from '@/lib/auth.config'
 import { normalizePhone } from '@/lib/username'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 /**
- * Login rate limiting: 10 attempts per 15 minutes per identifier, matching
- * the forgot-password limiter pattern.
+ * Login rate limiting: 10 attempts per 15 minutes per identifier, stored in
+ * Postgres (lib/rate-limit.ts) so it survives restarts and deploys.
  */
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
 const MAX_LOGIN_ATTEMPTS = 10
-const loginHits = new Map<string, number[]>()
 
-function loginRateLimited(identifier: string) {
-  const now = Date.now()
-  const recent = (loginHits.get(identifier) ?? []).filter(t => now - t < LOGIN_WINDOW_MS)
-  recent.push(now)
-  loginHits.set(identifier, recent)
-  if (recent.length > MAX_LOGIN_ATTEMPTS) return true
-  return false
+async function loginRateLimited(identifier: string) {
+  const { ok } = await checkRateLimit(`login:${identifier}`, MAX_LOGIN_ATTEMPTS, LOGIN_WINDOW_MS)
+  return !ok
 }
 
 /**
@@ -44,7 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           typeof credentials?.identifier === 'string' ? credentials.identifier.trim().toLowerCase() : ''
         const password = typeof credentials?.password === 'string' ? credentials.password : ''
         if (!identifier || !password) return null
-        if (loginRateLimited(identifier)) return null
+        if (await loginRateLimited(identifier)) return null
 
         let user: {
           id: string

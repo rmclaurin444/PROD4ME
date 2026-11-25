@@ -1,5 +1,6 @@
 import { prisma } from './prisma.ts'
 import { formatMoney } from './money.ts'
+import { expireStaleOffers } from './offers.ts'
 
 /**
  * Notifications built from existing rows (no notification table):
@@ -356,6 +357,9 @@ export async function getNotifications(userId: string, role: string): Promise<{
     select: { notificationsSeenAt: true },
   })
   const seenAt = user?.notificationsSeenAt ?? null
+
+  // lazy expiry: overdue offers must never read as active between cron runs
+  await expireStaleOffers()
 
   const sources: Promise<Built[]>[] = [
     buildOfferItems(userId, role === 'ARTIST' ? 'ARTIST' : 'PRODUCER'),

@@ -338,3 +338,14 @@ model Block {
 
   @@id([blockerId, blockedId])
 }
+
+/// Postgres-backed fixed-window rate limiter (lib/rate-limit.ts). One row per
+/// key per window; rows older than 24h are deleted by the hourly cron.
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}

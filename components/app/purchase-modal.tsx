@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { dollarsToCents, formatMoney, MIN_PURCHASE_CENTS } from '@/lib/money'
 import { trackEvent } from '@/lib/recommendations/track'
 import type { ShapedBeat } from '@/lib/beats'
+import { StripeTestNotice } from '@/components/app/stripe-test-notice'
 
 export type PurchaseMode = 'buy' | 'offer'
 
@@ -211,6 +212,7 @@ export function PurchaseModal({
                   <span className="text-muted-foreground">{LICENSE_LABEL[licenseType]} license</span>
                   <span className="font-black">{listing !== null ? formatMoney(listing) : '—'}</span>
                 </div>
+                <StripeTestNotice className="mt-3" />
                 <Button
                   onClick={buyNow}
                   disabled={busy || listing === null || licenseOwned}

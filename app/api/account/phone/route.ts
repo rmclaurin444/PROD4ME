@@ -70,7 +70,12 @@ export async function POST(request: Request) {
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     })
-    return NextResponse.json({ ok: true, devCode })
+    // never expose codes in production (startPhoneVerification only returns
+    // one in development, but keep the response gate explicit)
+    return NextResponse.json({
+      ok: true,
+      devCode: process.env.NODE_ENV !== 'production' ? devCode : undefined,
+    })
   }
 
   return NextResponse.json({ ok: true })

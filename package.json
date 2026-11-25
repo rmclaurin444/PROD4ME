@@ -1,5 +1,5 @@
 {
-  "name": "my-project",
+  "name": "prod4me",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,12 +8,14 @@
     "start": "next start",
     "seed": "node --env-file=.env prisma/seed.mjs",
     "seed:dump": "node --env-file=.env scripts/seed-dev-dump.ts",
-    "seed:dump:clean": "node --env-file=.env scripts/seed-dev-dump.ts --clean"
+    "seed:dump:clean": "node --env-file=.env scripts/seed-dev-dump.ts --clean",
+    "postinstall": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
+    "cron:call": "node scripts/cron-call.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
     "@prisma/client": "^6.19.3",
-    "@vercel/analytics": "1.6.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

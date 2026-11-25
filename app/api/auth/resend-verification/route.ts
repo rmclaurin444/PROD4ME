@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { consumeVerificationToken, countRecentVerifications, issueVerificationToken } from '@/lib/verification-token'
 import { EMAIL_TEMPLATES, sendEmail } from '@/lib/email'
+import { getAppUrl } from '@/lib/app-url'
 
 const RESEND_WINDOW_MS = 60 * 60 * 1000
 const RESEND_LIMIT = 3
@@ -39,8 +40,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const token = await issueVerificationToken(user.id, 'EMAIL_VERIFY', user.email, 24 * 60 * 60 * 1000)
-  const origin = request.headers.get('origin') ?? 'http://localhost:3000'
-  const link = `${origin}/verify-email?token=${token}`
+  const link = `${getAppUrl()}/verify-email?token=${token}`
 
   try {
     await sendEmail({ to: user.email, ...EMAIL_TEMPLATES.verifyEmail(link) })

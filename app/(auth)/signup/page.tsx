@@ -287,6 +287,18 @@ export default function SignUpPage() {
             Continue
           </button>
 
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            By creating an account you agree to the{' '}
+            <Link href="/terms" className="font-bold text-foreground underline underline-offset-2">
+              Terms
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="font-bold text-foreground underline underline-offset-2">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link href="/login" className="font-bold text-brand">

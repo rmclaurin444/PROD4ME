@@ -1,4 +1,5 @@
 import { prisma } from './prisma.ts'
+import { expireStaleOffers } from './offers.ts'
 
 /**
  * Aggregations behind GET /api/dev/analytics (admin-only). Everything is a
@@ -56,6 +57,9 @@ export async function getAnalytics(
 ): Promise<AnalyticsResult> {
   const start = rangeStart(range)
   const userWhere = userFilter(includeDev)
+
+  // lazy expiry so overdue offers don't count as accepted (AWAITING_PAYMENT)
+  await expireStaleOffers()
 
   const since = (col: 'createdAt') => (start ? { [col]: { gte: start } } : {})
 

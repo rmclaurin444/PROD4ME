@@ -1,6 +1,17 @@
 import type { NextAuthConfig } from 'next-auth'
 
+/**
+ * Paths anyone can open without logging in. API routes are excluded from the
+ * proxy matcher (proxy.ts) and guard themselves, but the public ones are
+ * listed here too so the allowlist is in one place.
+ */
+const PUBLIC_PATHS = ['/terms', '/privacy', '/api/health', '/api/media/', '/robots.txt', '/opengraph-image', '/icon.svg']
+
 export const authConfig = {
+  // Railway (like any reverse proxy) forwards the public host in
+  // X-Forwarded-Host. Auth.js only trusts that automatically on Vercel and
+  // Cloudflare Pages; without this, logins fail with `UntrustedHost`.
+  trustHost: true,
   pages: {
     signIn: '/login',
   },
@@ -49,6 +60,10 @@ export const authConfig = {
       const { pathname } = request.nextUrl
 
       if (pathname.startsWith('/api/auth')) {
+        return true
+      }
+
+      if (PUBLIC_PATHS.some(path => pathname === path || (path.endsWith('/') && pathname.startsWith(path)))) {
         return true
       }
 

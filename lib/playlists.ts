@@ -1,5 +1,5 @@
 import { prisma } from './prisma.ts'
-import { presignDownload, BUCKET_ARTWORK } from './storage.ts'
+import { publicUrl, BUCKET_ARTWORK } from './storage.ts'
 import type { ShapedBeat } from './beats.ts'
 
 export type ShapedPlaylist = {
@@ -37,7 +37,7 @@ export async function getProducerPlaylists(producerId: string): Promise<ShapedPl
       id: playlist.id,
       title: playlist.title,
       description: playlist.description,
-      artUrl: playlist.artKey ? await presignDownload(BUCKET_ARTWORK, playlist.artKey) : null,
+      artUrl: playlist.artKey ? publicUrl(BUCKET_ARTWORK, playlist.artKey) : null,
       artPreset: playlist.artPreset,
       beats: await Promise.all(
         playlist.beats.map(async beat => ({
@@ -59,7 +59,7 @@ export async function getProducerPlaylists(producerId: string): Promise<ShapedPl
         shares: beat.shares,
         comments: beat.comments,
         durationSec: beat.durationSec,
-        artUrl: beat.artKey ? await presignDownload(BUCKET_ARTWORK, beat.artKey) : null,
+        artUrl: beat.artKey ? publicUrl(BUCKET_ARTWORK, beat.artKey) : null,
         artPreset: beat.artPreset,
         peaks: Array.isArray(beat.peaks) ? (beat.peaks as number[]) : null,
         // playlist views never autoplay — the presigned preview URL is not needed

@@ -19,3 +19,5 @@ dev.log
 dev.err.log
 listener.err.log
 listener.log
+# Large archives (e.g. local MinIO image exports)
+*.tar

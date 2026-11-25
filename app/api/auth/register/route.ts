@@ -5,6 +5,7 @@ import { normalizeGenres, getOrCreateGenreTags, incrementGenreInterestCounts } f
 import { normalizePhone, phoneError, usernameValidationError, normalizeUsername } from '@/lib/username'
 import { issueVerificationToken } from '@/lib/verification-token'
 import { EMAIL_TEMPLATES, sendEmail } from '@/lib/email'
+import { getAppUrl } from '@/lib/app-url'
 
 export async function POST(request: Request) {
   try {
@@ -95,8 +96,7 @@ export async function POST(request: Request) {
       user.email,
       24 * 60 * 60 * 1000
     )
-    const origin = request.headers.get('origin') ?? 'http://localhost:3000'
-    const link = `${origin}/verify-email?token=${token}`
+    const link = `${getAppUrl()}/verify-email?token=${token}`
     try {
       await sendEmail({ to: user.email, ...EMAIL_TEMPLATES.verifyEmail(link) })
     } catch (error) {

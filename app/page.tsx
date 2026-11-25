@@ -5,7 +5,8 @@ import { isAdmin } from '@/lib/admin'
 import { getBeats } from '@/lib/beats'
 import { getProducerPlaylists } from '@/lib/playlists'
 import { getArtistLibrary } from '@/lib/licenses'
-import { presignDownload, BUCKET_ARTWORK } from '@/lib/storage'
+import { publicUrl, BUCKET_ARTWORK } from '@/lib/storage'
+import { expireStaleOffers } from '@/lib/offers'
 import { AppShell } from '@/components/app/app-shell'
 
 export default async function Page() {
@@ -39,9 +40,12 @@ export default async function Page() {
   const beats = await getBeats(50, interestNames)
   const library = user.role === 'ARTIST' ? await getArtistLibrary(user.id) : []
 
-  // presigned image URLs for the user's own avatar/banner
-  const avatarUrl = user.avatar ? await presignDownload(BUCKET_ARTWORK, user.avatar) : null
-  const bannerUrl = user.banner ? await presignDownload(BUCKET_ARTWORK, user.banner) : null
+  // image URLs for the user's own avatar/banner (through publicUrl, so the
+  // /api/media redirect is used when MEDIA_PROXY=1)
+  const avatarUrl = user.avatar ? publicUrl(BUCKET_ARTWORK, user.avatar) : null
+  const bannerUrl = user.banner ? publicUrl(BUCKET_ARTWORK, user.banner) : null
+  // lazy expiry so the open-offers badge never counts overdue offers
+  if (user.role === 'PRODUCER') await expireStaleOffers()
   const ownedOffers =
     user.role === 'PRODUCER'
       ? await prisma.offer.count({

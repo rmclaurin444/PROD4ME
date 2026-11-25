@@ -9,6 +9,7 @@ import { finalizeCheckoutSession } from '@/lib/finalize'
 import {
   expireStaleOffers,
 } from '@/lib/offers'
+import { getAppUrl } from '@/lib/app-url'
 
 const SESSION_PAGE = '/checkout/success'
 
@@ -75,7 +76,8 @@ export async function POST(request: Request) {
     return bad('Invalid request body')
   }
 
-  const origin = request.headers.get('origin') ?? 'http://localhost:3000'
+  // fixed app URL, never the request's Origin header (can be missing/forged)
+  const origin = getAppUrl()
 
   let beatId: string
   let licenseType: 'NON_EXCLUSIVE' | 'EXCLUSIVE'

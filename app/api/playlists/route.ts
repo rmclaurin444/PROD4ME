@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { requireVerifiedUser } from '@/lib/auth-guards'
 import { prisma } from '@/lib/prisma'
-import { presignDownload, BUCKET_ARTWORK, publicUrl } from '@/lib/storage'
+import { BUCKET_ARTWORK, publicUrl } from '@/lib/storage'
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status })
@@ -33,7 +33,7 @@ export async function GET() {
       id: playlist.id,
       title: playlist.title,
       description: playlist.description,
-      artUrl: playlist.artKey ? await presignDownload(BUCKET_ARTWORK, playlist.artKey) : null,
+      artUrl: playlist.artKey ? publicUrl(BUCKET_ARTWORK, playlist.artKey) : null,
       artPreset: playlist.artPreset,
       beats: playlist.beats.map(beat => ({
         id: beat.id,

@@ -22,7 +22,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ userId: st
   if (targetId === verified.userId) {
     return NextResponse.json({ error: "You can't follow yourself" }, { status: 400 })
   }
-  if (followRateLimited(verified.userId)) {
+  if (await followRateLimited(verified.userId)) {
     return NextResponse.json({ error: 'Too many follow changes. Try again later.' }, { status: 429 })
   }
 
@@ -43,7 +43,7 @@ export async function DELETE(request: Request, ctx: { params: Promise<{ userId: 
 
   const { userId: targetId } = await ctx.params
   // unfollows count toward the same 60 changes/hour limit
-  if (followRateLimited(verified.userId)) {
+  if (await followRateLimited(verified.userId)) {
     return NextResponse.json({ error: 'Too many follow changes. Try again later.' }, { status: 429 })
   }
   await unfollowUser(verified.userId, targetId)

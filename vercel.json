@@ -1,6 +1,0 @@
-{
-  "crons": [
-    { "path": "/api/cron/leaderboard", "schedule": "5 5 * * 1" },
-    { "path": "/api/cron/expire-offers", "schedule": "0 * * * *" }
-  ]
-}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { timeLeftLabel, formatMoney, dollarsToCents, MIN_PURCHASE_CENTS } from '@/lib/money'
 import type { ShapedOffer } from '@/lib/offers'
+import { StripeTestNotice } from '@/components/app/stripe-test-notice'
 
 function licenseLabel(licenseType: string) {
   return licenseType === 'EXCLUSIVE' ? 'Exclusive' : 'Non-exclusive'
@@ -334,6 +335,7 @@ export function OffersInbox({ role, isArtist }: { role: string; isArtist: boolea
                 <p className="mt-1.5 text-[11px] text-muted-foreground">
                   Agreed at {formatMoney(offer.agreedAmountCents ?? offer.amountCents)}
                 </p>
+                <StripeTestNotice className="mt-2" />
               </div>
             )}
 

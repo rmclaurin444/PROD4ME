@@ -1,8 +1,18 @@
 import * as Minio from 'minio'
+import { getAppUrl } from './app-url.ts'
 
-const endPoint = process.env.MINIO_ENDPOINT ?? 'localhost'
+// MINIO_ENDPOINT may be given as a bare host or a full URL (Railway bucket
+// variables are URLs) — strip the scheme and any path.
+const endPoint = (process.env.MINIO_ENDPOINT ?? 'localhost').replace(/^https?:\/\//, '').replace(/\/.*$/, '')
 const port = Number(process.env.MINIO_PORT ?? 9000)
 const useSSL = process.env.MINIO_USE_SSL === 'true'
+// Railway Buckets: region from the bucket's credentials, virtual-hosted-style
+// URLs (MINIO_PATH_STYLE=false). Local MinIO: us-east-1, path-style.
+const region = process.env.MINIO_REGION || 'us-east-1'
+const pathStyle = process.env.MINIO_PATH_STYLE !== 'false'
+// MEDIA_PROXY=1 (Railway): buckets are private, so images are served through
+// the /api/media redirect route instead of direct bucket URLs.
+const mediaProxy = process.env.MEDIA_PROXY === '1'
 
 export const BUCKET_AUDIO = process.env.MINIO_BUCKET_AUDIO ?? 'beat-audio'
 export const BUCKET_ARTWORK = process.env.MINIO_BUCKET_ARTWORK ?? 'beat-artwork'
@@ -41,6 +51,8 @@ function getClient() {
       endPoint,
       port,
       useSSL,
+      region,
+      pathStyle,
       accessKey: process.env.MINIO_ACCESS_KEY ?? 'minioadmin',
       secretKey: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
     })
@@ -55,11 +67,32 @@ export function buildKey(kind: 'audio' | 'artwork' | 'avatars' | 'banners', user
   return `${kind}/${userId}/${id}.${safeExt}`
 }
 
+/** Key prefixes the /api/media route may serve (artwork bucket only). */
+export const MEDIA_KEY_PREFIXES = ['artwork/', 'avatars/', 'banners/'] as const
+
+export function isMediaKey(key: string): boolean {
+  return (
+    MEDIA_KEY_PREFIXES.some(prefix => key.startsWith(prefix)) &&
+    !key.includes('..') &&
+    !key.includes('//') &&
+    !key.includes('\\')
+  )
+}
+
+/**
+ * Browser-facing URL for a public image (artwork, avatars, banners, playlist
+ * covers). Every caller goes through here.
+ *  - MEDIA_PROXY=1 (Railway, private buckets): `${APP_URL}/api/media/<key>`,
+ *    which 302-redirects to a short-lived presigned GET.
+ *  - MINIO_PUBLIC_ENDPOINT: legacy public-host mode (bucket name in the path);
+ *    not used on Railway.
+ *  - otherwise: the local MinIO endpoint (artwork bucket is public-read).
+ */
 export function publicUrl(bucket: string, key: string) {
-  // Cloud-hosted S3-compatible stores (R2, S3) serve public objects from a
-  // different host than the API endpoint — set MINIO_PUBLIC_ENDPOINT to that
-  // public host (e.g. "pub-xxx.r2.dev" or "bucket.s3.amazonaws.com") and it
-  // takes precedence. Unset keeps the MinIO-style endpoint:port URL.
+  if (mediaProxy) {
+    const encoded = key.split('/').map(encodeURIComponent).join('/')
+    return `${getAppUrl()}/api/media/${encoded}`
+  }
   const publicHost = process.env.MINIO_PUBLIC_ENDPOINT
   if (publicHost) return `https://${publicHost.replace(/^https?:\/\//, '')}/${bucket}/${key}`
   const protocol = useSSL ? 'https' : 'http'

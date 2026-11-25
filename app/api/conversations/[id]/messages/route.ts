@@ -133,7 +133,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     return bad(`Message is too long (max ${MESSAGE_MAX_CHARS} characters)`)
   }
 
-  if (sendRateLimited(me)) {
+  if (await sendRateLimited(me)) {
     return bad('You are sending messages too quickly. Try again in a moment.', 429)
   }
 
